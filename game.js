@@ -5,6 +5,7 @@ import { Particle } from './Particle.js';
 import { AI } from './AI.js';
 import { HUD } from './HUD.js';
 import { Planet } from './Planet.js';
+import { HealthBoost } from './healthboost.js';
 
 // ─── Utility functions ────────────────────────────────────────────────────────
 function rnd(a, b) {
