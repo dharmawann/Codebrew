@@ -113,8 +113,8 @@ export class Asteroid {
     const closeBoost = this.z < 900 ? 1.35 : 1;
     const steer = tracking * depthBoost * closeBoost * dt;
 
-    this.vx += dx * steer * 0.012;
-    this.vy += dy * steer * 0.012;
+    this.vx += dx * steer * 0.025;
+    this.vy += dy * steer * 0.025;
 
     this.vx = Math.max(-1.8, Math.min(1.8, this.vx));
     this.vy = Math.max(-1.2, Math.min(1.2, this.vy));
