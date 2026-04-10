@@ -7,6 +7,7 @@ import { HUD } from './HUD.js';
 import { Planet } from './Planet.js';
 import { HealthBoost } from './healthboost.js';
 import { Minigame } from './Minigame.js';
+import { Alien } from './Alien.js';
 
 // ─── Utility functions ────────────────────────────────────────────────────────
 function rnd(a, b) {
@@ -60,7 +61,21 @@ export class Game {
     this.effectTextTimer = 0;
 
     // ── Alien encounter ─────────────────────────────────────────────────────
-    this.encounter = { active: false };
+    this.aliens = [
+      new Alien('friendly'),
+      new Alien('mysterious'),
+      new Alien('aggressive')
+    ];
+
+    this.encounter = {
+      active: false,
+      alien: null,
+      title: '',
+      body: '',
+      choices: [],
+      aiRecommendation: '',
+      timer: 0
+    };
 
     // ── Minigame ────────────────────────────────────────────────────────────
     this.minigame = new Minigame();
@@ -124,6 +139,11 @@ export class Game {
         // ── E: AI execute (only when no minigame) ───────────────────────
         if (k === 'e' && this.aiMode && !this.minigame.active) {
           this.executeAI();
+        }
+
+        // ── Encounter choices ───────────────────────────────────────────
+        if (this.encounter.active && ['1', '2', '3'].includes(k)) {
+          this.resolveEncounter(parseInt(k, 10) - 1);
         }
 
         // ── shield minigame key input ───────────────────────────────────
@@ -298,6 +318,66 @@ export class Game {
     }
   }
 
+  // ── Alien encounter methods ─────────────────────────────────────────────────
+
+  startEncounter(alien) {
+    if (this.encounter.active) return;
+    const data = alien.getPromptText();
+    this.encounter.active = true;
+    this.encounter.alien = alien;
+    this.encounter.title = data.title;
+    this.encounter.body = data.body;
+    this.encounter.choices = data.choices;
+    this.encounter.aiRecommendation = this.aiMode ? alien.getAIRecommendation() : '';
+    this.encounter.timer = 300;
+    if (this.aiMode) {
+      this.ai.push(`DECISION EVENT: ${data.title}`, '#bbccff');
+      this.ai.push(`RECOMMENDATION: ${this.encounter.aiRecommendation}`, '#99ff66');
+    }
+  }
+
+  resolveEncounter(choiceIndex) {
+    if (!this.encounter.active || !this.encounter.alien) return;
+    const choice = this.encounter.choices[choiceIndex];
+    const result = this.encounter.alien.resolve(choice);
+    const fx = result.effects || {};
+    if (fx.hull) this.hull = clamp(this.hull + fx.hull, 0, 100);
+    if (fx.oxygen) this.oxygen = clamp(this.oxygen + fx.oxygen, 0, 100);
+    if (fx.radiation) this.radiation = clamp(this.radiation + fx.radiation, 0, 100);
+    if (fx.health) this.health = clamp(this.health + fx.health, 0, 100);
+    if (this.aiMode) {
+      this.ai.push(result.message, result.ok ? '#00ffcc' : '#ff6644');
+    }
+    this._clearEncounter();
+  }
+
+  failEncounter() {
+    if (!this.encounter.active || !this.encounter.alien) return;
+    if (this.encounter.alien.type === 'friendly') {
+      this.hull = Math.max(0, this.hull - 10);
+    } else if (this.encounter.alien.type === 'mysterious') {
+      this.radiation = clamp(this.radiation + 12, 0, 100);
+    } else {
+      this.hull = Math.max(0, this.hull - 18);
+      this.health = Math.max(0, this.health - 10);
+    }
+    if (this.aiMode) {
+      this.ai.push('ENCOUNTER TIMED OUT', '#ff6644');
+    }
+    this._clearEncounter();
+  }
+
+  _clearEncounter() {
+    if (this.encounter.alien) this.encounter.alien.reset();
+    this.encounter.active = false;
+    this.encounter.alien = null;
+    this.encounter.title = '';
+    this.encounter.body = '';
+    this.encounter.choices = [];
+    this.encounter.aiRecommendation = '';
+    this.encounter.timer = 0;
+  }
+
   _applyMinigameResult(type, success) {
     if (type === 'cool') {
       if (success) {
@@ -366,6 +446,14 @@ export class Game {
     this.jitter = Math.max(0, this.jitter - 0.45 * dt);
     this.radiationFlash = Math.max(0, this.radiationFlash - 0.01 * dt);
 
+    // ── Encounter timer ─────────────────────────────────────────────────────
+    if (this.encounter.active) {
+      this.encounter.timer = Math.max(0, this.encounter.timer - dt);
+      if (this.encounter.timer <= 0) {
+        this.failEncounter();
+      }
+    }
+
     // ── Minigame update ─────────────────────────────────────────────────────
     const mgWasActive = this.minigame.active;
     const mgType = this.minigame.type;
@@ -406,23 +494,34 @@ export class Game {
     this.humidity = clamp(this.humidity, 18, 100);
     this.fogAlpha = clamp((this.humidity - 63) / 37, 0, 0.75);
 
-    let oxygenDrain = 0.02 * dt;
-    if (moving) oxygenDrain += 0.018 * dt;
-    if (this.temp > 90) oxygenDrain += 0.025 * dt;
-    if (this.burnTimer > 0) oxygenDrain += 0.01 * dt;
+    // ── Oxygen (fixed: no constant drain, zero oxygen hurts health) ─────────
+    let oxygenDrain = 0;
+    if (moving) oxygenDrain += 0.01 * dt;
+    if (this.speed > 1.8) oxygenDrain += 0.012 * dt;
+    if (this.temp > 95) oxygenDrain += 0.018 * dt;
+    if (this.burnTimer > 0) oxygenDrain += 0.015 * dt;
+    oxygenDrain += 0.002 * dt; // tiny passive drain
     this.oxygen = clamp(this.oxygen - oxygenDrain, 0, 100);
 
+    if (this.oxygen <= 0) {
+      this.health -= 0.22 * dt;
+      this.showEffectText('OXYGEN DEPLETED', '#66ccff');
+    }
+
+    // ── Radiation ───────────────────────────────────────────────────────────
     if (Math.random() < 0.0028 * dt) this.radiation += rnd(2, 6);
     if (this.temp > 96) this.radiation += 0.012 * dt;
     if (this.burnTimer > 0) this.radiation += 0.015 * dt;
-
     this.radiation = clamp(this.radiation - 0.01 * dt, 0, 100);
     if (this.radiation > 70) this.radiationFlash = Math.min(0.22, this.radiationFlash + 0.005 * dt);
 
+    // ── Damage from bad conditions ──────────────────────────────────────────
     if (this.temp > 88 && this.shieldActive <= 0) {
       this.hull -= 0.022 * dt * (this.temp - 88) / 84;
     }
-    if (this.oxygen < 22) this.health -= 0.05 * dt * (22 - this.oxygen) / 22;
+    if (this.oxygen < 22 && this.oxygen > 0) {
+      this.health -= 0.05 * dt * (22 - this.oxygen) / 22;
+    }
     if (this.radiation > 72) this.health -= 0.04 * dt * (this.radiation - 72) / 28;
     if (this.temp > 108) this.health -= 0.03 * dt;
     this.health = clamp(this.health, 0, 100);
@@ -444,14 +543,11 @@ export class Game {
 
     for (const hb of this.healthBoosts) {
       hb.update(this.speed, dt, rnd);
-
       const p = this.project(hb.x, hb.y, hb.z);
       if (!p || !hb.active) continue;
-
       const hitR = hb.size * p.scale * 0.95;
       const dx = p.x - this.W() / 2;
       const dy = p.y - this.H() / 2;
-
       if (
         Math.abs(dx) < hitR + 10 &&
         Math.abs(dy) < hitR + 10 &&
@@ -459,29 +555,16 @@ export class Game {
         hb.z > -40
       ) {
         const heal = hb.collect();
-
         this.hull = Math.min(100, this.hull + heal);
         this.health = Math.min(100, this.health + heal * 0.6);
-
         for (let i = 0; i < 12; i++) {
-          this.particles.push(
-            new Particle(
-              this.W() / 2,
-              this.H() / 2,
-              rnd(-4, 4),
-              rnd(-4, 4),
-              28,
-              i % 2 === 0 ? '#7dffbf' : '#d7fff0'
-            )
-          );
+          this.particles.push(new Particle(
+            this.W() / 2, this.H() / 2, rnd(-4, 4), rnd(-4, 4), 28,
+            i % 2 === 0 ? '#7dffbf' : '#d7fff0'
+          ));
         }
-
         this.showEffectText(`+${heal}% HULL`, '#7dffbf');
-
-        if (this.aiMode) {
-          this.ai.push(`HEALTH BOOST COLLECTED +${heal}%`, '#7dffbf');
-        }
-
+        if (this.aiMode) this.ai.push(`HEALTH BOOST COLLECTED +${heal}%`, '#7dffbf');
         hb.respawn(rnd);
       }
     }
@@ -489,7 +572,6 @@ export class Game {
     for (const a of this.asteroids) {
       const asteroidSpeed = this.speed * (1 + this.survivalTime * 0.015);
       a.update(asteroidSpeed, dt, rnd, this.ship.x + this.ship.vx * 10, this.ship.y + this.ship.vy * 10);
-
       const p = this.project(a.x, a.y, a.z);
       if (!p) continue;
       const hitR = a.size * p.scale * 0.72;
@@ -498,6 +580,29 @@ export class Game {
       if (Math.abs(dx) < hitR + 14 && Math.abs(dy) < hitR + 14 && a.z < 220 && a.z > -60) {
         this._handleCollision(a, p);
         if (!this.alive) return;
+      }
+    }
+
+    // ── Alien update + trigger ──────────────────────────────────────────────
+    for (const alien of this.aliens) {
+      alien.update(this.speed, dt);
+
+      if (this.encounter.active) continue;
+
+      const p = this.project(alien.x, alien.y, alien.z);
+      if (!p) continue;
+
+      const hitR = alien.size * p.scale * 0.5;
+      const dx = p.x - this.W() / 2;
+      const dy = p.y - this.H() / 2;
+
+      if (
+        Math.abs(dx) < hitR + 16 &&
+        Math.abs(dy) < hitR + 16 &&
+        alien.z < 360 &&
+        alien.z > 120
+      ) {
+        this.startEncounter(alien);
       }
     }
 
@@ -581,11 +686,20 @@ export class Game {
       .sort((a, b) => b.z - a.z)
       .forEach(a => a.draw(ctx, this.project.bind(this), clamp));
 
+    // ── Draw aliens (behind cockpit frame) ──────────────────────────────────
+    [...this.aliens]
+      .sort((a, b) => b.z - a.z)
+      .forEach(a => a.draw(ctx, this.project.bind(this)));
+
     this.hud.drawCockpit();
     for (const p of this.particles) p.draw(ctx);
     this.hud.drawMFDs(this);
     this.hud.drawHUD(this.hull, this.speed, this.shieldActive, this.aiMode, this.aiCooldown, this.frame);
     this.hud.drawVitals(this);
+
+    // ── Draw encounter popup ────────────────────────────────────────────────
+    this.hud.drawEncounter(this.encounter, this.frame);
+
     this.hud.drawFog(this.fogAlpha, rnd);
     this.hud.drawFlicker(this.flickerAlpha, rnd);
     this.hud.drawRadiationOverlay(this.radiation / 100 + this.radiationFlash, rnd);

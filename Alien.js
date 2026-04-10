@@ -1,3 +1,13 @@
+const images = {
+    friendly: new Image(),
+    mysterious: new Image(),
+    aggressive: new Image()
+  };
+  
+  images.friendly.src = './assets/friendly.png';
+  images.mysterious.src = './assets/mysterious.png';
+  images.aggressive.src = './assets/aggressive.png';
+  
 function rnd(a, b) {
     return a + Math.random() * (b - a);
   }
