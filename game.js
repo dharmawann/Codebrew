@@ -4,6 +4,7 @@ import { Asteroid } from './Asteroid.js';
 import { Particle } from './Particle.js';
 import { AI }       from './AI.js';
 import { HUD }      from './HUD.js';
+import { Planet }   from './planet.js';
 
 // ─── Utility functions ────────────────────────────────────────────────────────
 function rnd(a, b)      { return a + Math.random() * (b - a); }
@@ -14,6 +15,7 @@ export class Game {
     this.canvas = canvas;
     this.ctx    = canvas.getContext('2d');
     this.aiMode = aiMode;
+    this.planets = Array.from({ length: 5 }, () => new Planet(rnd));
 
     // ── Game state ──────────────────────────────────────────────────────────
     this.alive        = true;
@@ -157,6 +159,9 @@ export class Game {
     // Stars
     for (const s of this.stars) s.update(this.speed, dt, rnd);
 
+    // planet
+    for (const p of this.planets) p.update(this.speed, dt, rnd);
+
     // Asteroids
     for (const a of this.asteroids) {
       a.update(this.speed, dt, rnd);
@@ -226,10 +231,19 @@ export class Game {
     for (const s of this.stars)
       s.draw(ctx, this.project.bind(this), this.speed, w, h);
 
-    // Asteroids (back to front)
+    // Planets
+    for (const s of this.stars)
+      s.draw(ctx, this.project.bind(this), this.speed, w, h);
+    for (const p of this.planets)
+      p.draw(ctx, this.project.bind(this));
+
     [...this.asteroids]
       .sort((a, b) => b.z - a.z)
       .forEach(a => a.draw(ctx, this.project.bind(this), clamp));
+        // Asteroids (back to front)
+        [...this.asteroids]
+          .sort((a, b) => b.z - a.z)
+          .forEach(a => a.draw(ctx, this.project.bind(this), clamp));
 
     // Cockpit frame
     this.hud.drawCockpit();
