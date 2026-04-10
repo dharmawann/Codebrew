@@ -3,63 +3,40 @@ function rnd(a, b) {
   }
   
   export class Alien {
-    constructor(rndFn) {
-      this.rnd = rndFn || rnd;
-  
-      this.type = this._pickType();
-      this.x = this.rnd(-1400, 1400);
-      this.y = this.rnd(-900, 900);
-      this.z = this.rnd(1400, 2600);
-  
-      this.size = this.type === 'aggressive' ? this.rnd(70, 110)
-                : this.type === 'mysterious' ? this.rnd(60, 95)
-                : this.rnd(55, 85);
-  
-      this.vx = this.rnd(-0.25, 0.25);
-      this.vy = this.rnd(-0.2, 0.2);
-      this.phase = this.rnd(0, Math.PI * 2);
-  
-      this.scanned = false;
-      this.resolved = false;
-    }
-  
-    _pickType() {
-      const roll = Math.random();
-      if (roll < 0.34) return 'friendly';
-      if (roll < 0.68) return 'mysterious';
-      return 'aggressive';
+    constructor(type = 'friendly') {
+      this.type = type;
+      this.reset();
     }
   
     reset() {
-      this.type = this._pickType();
-      this.x = this.rnd(-1400, 1400);
-      this.y = this.rnd(-900, 900);
-      this.z = this.rnd(1800, 2800);
-      this.size = this.type === 'aggressive' ? this.rnd(70, 110)
-                : this.type === 'mysterious' ? this.rnd(60, 95)
-                : this.rnd(55, 85);
-      this.vx = this.rnd(-0.25, 0.25);
-      this.vy = this.rnd(-0.2, 0.2);
-      this.phase = this.rnd(0, Math.PI * 2);
-      this.scanned = false;
+      this.x = rnd(-900, 900);
+      this.y = rnd(-520, 520);
+      this.z = rnd(1800, 2800);
+      this.vx = rnd(-0.3, 0.3);
+      this.vy = rnd(-0.2, 0.2);
+      this.size =
+        this.type === 'aggressive' ? rnd(85, 115) :
+        this.type === 'mysterious' ? rnd(75, 100) :
+        rnd(70, 95);
+  
+      this.phase = rnd(0, Math.PI * 2);
       this.resolved = false;
     }
   
-    update(speed, dt, survivalTime) {
-      this.z -= speed * 16 * dt;
-  
-      this.phase += 0.02 * dt;
+    update(speed, dt) {
+      this.z -= speed * 18 * dt;
+      this.phase += 0.03 * dt;
   
       if (this.type === 'friendly') {
-        this.x += this.vx * dt + Math.sin(this.phase) * 0.25;
-        this.y += this.vy * dt + Math.cos(this.phase) * 0.18;
+        this.x += this.vx * dt + Math.sin(this.phase) * 0.35;
+        this.y += this.vy * dt + Math.cos(this.phase) * 0.2;
       } else if (this.type === 'mysterious') {
         this.x += this.vx * dt + Math.sin(this.phase * 1.7) * 0.55;
         this.y += this.vy * dt + Math.cos(this.phase * 1.3) * 0.45;
       } else {
-        this.x += this.vx * dt + Math.sin(this.phase * 2.2) * 0.7;
-        this.y += this.vy * dt + Math.cos(this.phase * 1.9) * 0.55;
-        this.z -= survivalTime * 0.004 * dt;
+        this.x += this.vx * dt + Math.sin(this.phase * 2.2) * 0.75;
+        this.y += this.vy * dt + Math.cos(this.phase * 1.8) * 0.55;
+        this.z -= 0.35 * dt;
       }
   
       if (this.z < -100) {
@@ -71,25 +48,24 @@ function rnd(a, b) {
       const p = project(this.x, this.y, this.z);
       if (!p) return;
   
-      const r = Math.max(6, this.size * p.scale * 0.18);
+      const r = Math.max(10, this.size * p.scale * 0.22);
   
-      let glow = '#00ffaa';
-      let core = '#66ffee';
+      let glow = '#66ffee';
+      let core = '#cffff4';
   
       if (this.type === 'mysterious') {
-        glow = '#bb66ff';
-        core = '#f0a0ff';
+        glow = '#d07cff';
+        core = '#f3d4ff';
       }
   
       if (this.type === 'aggressive') {
-        glow = '#ff3355';
-        core = '#ff9aa8';
+        glow = '#ff5a78';
+        core = '#ffd0d8';
       }
   
       ctx.save();
-      ctx.globalAlpha = 0.9;
-  
-      ctx.shadowBlur = r * 2.4;
+      ctx.globalAlpha = 0.95;
+      ctx.shadowBlur = r * 2.1;
       ctx.shadowColor = glow;
   
       ctx.fillStyle = glow;
@@ -100,11 +76,11 @@ function rnd(a, b) {
       ctx.shadowBlur = 0;
       ctx.fillStyle = core;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, r * 0.48, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, r * 0.46, 0, Math.PI * 2);
       ctx.fill();
   
       if (this.type === 'mysterious') {
-        ctx.strokeStyle = 'rgba(220,160,255,0.75)';
+        ctx.strokeStyle = 'rgba(225,180,255,0.8)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(p.x, p.y, r * 1.45, 0, Math.PI * 2);
@@ -112,7 +88,7 @@ function rnd(a, b) {
       }
   
       if (this.type === 'aggressive') {
-        ctx.strokeStyle = 'rgba(255,70,90,0.8)';
+        ctx.strokeStyle = 'rgba(255,80,110,0.85)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(p.x - r * 1.5, p.y);
@@ -129,7 +105,7 @@ function rnd(a, b) {
       if (this.type === 'friendly') {
         return {
           title: 'FRIENDLY ALIEN DETECTED',
-          body: 'Passive lifeform. Non-hostile movement pattern.',
+          body: 'Passive lifeform. No hostile signatures.',
           choices: ['ATTACK', 'LEAVE', 'SIGNAL']
         };
       }
@@ -137,14 +113,14 @@ function rnd(a, b) {
       if (this.type === 'mysterious') {
         return {
           title: 'MYSTERIOUS ALIEN DETECTED',
-          body: 'Unknown intent. Readings unstable. Decision required.',
+          body: 'Unknown intent. Readings unstable.',
           choices: ['SCAN', 'IGNORE', 'ATTACK']
         };
       }
   
       return {
         title: 'AGGRESSIVE ALIEN DETECTED',
-        body: 'Hostile target closing fast. Immediate action advised.',
+        body: 'Hostile target closing fast.',
         choices: ['ATTACK', 'SHIELD', 'EVADE']
       };
     }
@@ -158,78 +134,33 @@ function rnd(a, b) {
     resolve(choice) {
       if (this.type === 'friendly') {
         if (choice === 'LEAVE') {
-          return {
-            ok: true,
-            message: 'Friendly alien allowed to pass.',
-            effects: { score: 1, oxygen: 3 }
-          };
+          return { ok: true, message: 'Friendly alien drifted away.', effects: { oxygen: 8 } };
         }
         if (choice === 'SIGNAL') {
-          return {
-            ok: true,
-            message: 'Alien responded peacefully and drifted away.',
-            effects: { oxygen: 2, radiation: -4 }
-          };
+          return { ok: true, message: 'Peaceful contact made.', effects: { oxygen: 4, radiation: -4 } };
         }
-        return {
-          ok: false,
-          message: 'You attacked a peaceful alien. Retaliation hit the hull.',
-          effects: { hull: -18, radiation: 8 }
-        };
+        return { ok: false, message: 'You attacked a peaceful alien.', effects: { hull: -18, health: -10 } };
       }
   
       if (this.type === 'mysterious') {
         if (choice === 'SCAN') {
-          const good = Math.random() < 0.65;
-          if (good) {
-            return {
-              ok: true,
-              message: 'Scan successful. Safe route data acquired.',
-              effects: { oxygen: 4, radiation: -6 }
-            };
+          if (Math.random() < 0.65) {
+            return { ok: true, message: 'Scan succeeded. Entity vanished.', effects: { radiation: -8 } };
           }
-          return {
-            ok: false,
-            message: 'Scan triggered an unstable pulse.',
-            effects: { hull: -10, radiation: 14 }
-          };
+          return { ok: false, message: 'Scan triggered an unstable burst.', effects: { radiation: 16, health: -8 } };
         }
-  
         if (choice === 'IGNORE') {
-          return {
-            ok: true,
-            message: 'You ignored it. It vanished into deep space.',
-            effects: { }
-          };
+          return { ok: true, message: 'You ignored it. It disappeared.', effects: {} };
         }
-  
-        return {
-          ok: false,
-          message: 'The target reacted violently to aggression.',
-          effects: { hull: -15, radiation: 10 }
-        };
+        return { ok: false, message: 'The alien retaliated.', effects: { hull: -14 } };
       }
   
       if (choice === 'ATTACK') {
-        return {
-          ok: true,
-          message: 'Aggressive alien neutralized.',
-          effects: { oxygen: -2 }
-        };
+        return { ok: true, message: 'Hostile alien neutralized.', effects: {} };
       }
-  
       if (choice === 'SHIELD') {
-        return {
-          ok: true,
-          message: 'Shield absorbed the incoming strike.',
-          effects: { radiation: 4, oxygen: -1 }
-        };
+        return { ok: true, message: 'Shield absorbed the strike.', effects: { radiation: 4 } };
       }
-  
-      return {
-        ok: false,
-        message: 'Evasion failed. Direct impact sustained.',
-        effects: { hull: -20, health: -10 }
-      };
+      return { ok: false, message: 'Evasion failed.', effects: { hull: -20, health: -10 } };
     }
   }
