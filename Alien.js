@@ -4,9 +4,9 @@ const images = {
     aggressive: new Image()
   };
   
-  images.friendly.src = './assets/friendly.png';
-  images.mysterious.src = './assets/mysterious.png';
-  images.aggressive.src = './assets/aggressive.png';
+  images.friendly.src = './Assets/friendly.png';
+  images.mysterious.src = './Assets/mysterious.png';
+  images.aggressive.src = './Assets/aggressive.png';
   
 function rnd(a, b) {
     return a + Math.random() * (b - a);
@@ -55,61 +55,34 @@ function rnd(a, b) {
     }
   
     draw(ctx, project) {
-      const p = project(this.x, this.y, this.z);
-      if (!p) return;
-  
-      const r = Math.max(10, this.size * p.scale * 0.22);
-  
-      let glow = '#66ffee';
-      let core = '#cffff4';
-  
-      if (this.type === 'mysterious') {
-        glow = '#d07cff';
-        core = '#f3d4ff';
+        const p = project(this.x, this.y, this.z);
+        if (!p) return;
+      
+        const img = images[this.type];
+        if (!img.complete || img.naturalWidth === 0) return;
+      
+        const size = Math.max(45, this.size * p.scale);
+      
+        ctx.save();
+        ctx.globalAlpha = 0.98;
+      
+        let glow = '#66ffee';
+        if (this.type === 'mysterious') glow = '#d07cff';
+        if (this.type === 'aggressive') glow = '#ff5a78';
+      
+        ctx.shadowBlur = size * 0.25;
+        ctx.shadowColor = glow;
+      
+        ctx.drawImage(
+          img,
+          p.x - size / 2,
+          p.y - size / 2,
+          size,
+          size
+        );
+      
+        ctx.restore();
       }
-  
-      if (this.type === 'aggressive') {
-        glow = '#ff5a78';
-        core = '#ffd0d8';
-      }
-  
-      ctx.save();
-      ctx.globalAlpha = 0.95;
-      ctx.shadowBlur = r * 2.1;
-      ctx.shadowColor = glow;
-  
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-      ctx.fill();
-  
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = core;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, r * 0.46, 0, Math.PI * 2);
-      ctx.fill();
-  
-      if (this.type === 'mysterious') {
-        ctx.strokeStyle = 'rgba(225,180,255,0.8)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, r * 1.45, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-  
-      if (this.type === 'aggressive') {
-        ctx.strokeStyle = 'rgba(255,80,110,0.85)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(p.x - r * 1.5, p.y);
-        ctx.lineTo(p.x + r * 1.5, p.y);
-        ctx.moveTo(p.x, p.y - r * 1.5);
-        ctx.lineTo(p.x, p.y + r * 1.5);
-        ctx.stroke();
-      }
-  
-      ctx.restore();
-    }
   
     getPromptText() {
       if (this.type === 'friendly') {
