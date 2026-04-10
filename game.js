@@ -1,10 +1,10 @@
 import { Ship } from './ship.js';
 import { Star } from './star.js';
-import { Asteroid } from './asteroid.js';
+import { Asteroid } from './Asteroid.js';
 import { Particle } from './particle.js';
 import { AI } from './ai.js';
 import { HUD } from './hud.js';
-import { Planet } from './planet.js';
+import { Planet } from './Planet.js';
 
 function rnd(a, b) {
   return a + Math.random() * (b - a);
