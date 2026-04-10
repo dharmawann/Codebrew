@@ -86,22 +86,23 @@ export class Asteroid {
     const dx = shipX - this.x;
     const dy = shipY - this.y;
 
-    let tracking = 0.0022;
+    let tracking = 0.0048;
 
-    if (this.variant === 'drift') tracking = 0.0032;
-    if (this.variant === 'fast') tracking = 0.0028;
-    if (this.variant === 'heavy') tracking = 0.0012;
-    if (this.variant === 'charged') tracking = 0.0026;
-    if (this.variant === 'ember') tracking = 0.0024;
+    if (this.variant === 'drift') tracking = 0.0062;
+    if (this.variant === 'fast') tracking = 0.0058;
+    if (this.variant === 'heavy') tracking = 0.0032;
+    if (this.variant === 'charged') tracking = 0.0056;
+    if (this.variant === 'ember') tracking = 0.0052;
 
-    const depthBoost = this.z < 1200 ? 1.35 : 1;
-    const steer = tracking * depthBoost * dt;
+    const depthBoost = this.z < 1500 ? 1.5 : 1;
+    const closeBoost = this.z < 900 ? 1.35 : 1;
+    const steer = tracking * depthBoost * closeBoost * dt;
 
-    this.vx += dx * steer * 0.01;
-    this.vy += dy * steer * 0.01;
+    this.vx += dx * steer * 0.012;
+    this.vy += dy * steer * 0.012;
 
-    this.vx = Math.max(-1.15, Math.min(1.15, this.vx));
-    this.vy = Math.max(-0.8, Math.min(0.8, this.vy));
+    this.vx = Math.max(-1.8, Math.min(1.8, this.vx));
+    this.vy = Math.max(-1.2, Math.min(1.2, this.vy));
 
     this.z += this.vz * speed * dt;
     this.x += this.vx * dt;
