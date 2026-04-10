@@ -6,10 +6,13 @@ export class AI {
   }
 
   // Score each danger and choose the biggest one
-  getRecommendation(temp, hull, humidity) {
+  getRecommendation(temp, hull, humidity, oxygen, radiation) {
     const heatScore = temp >= 55 ? (temp - 55) * 1.6 : 0;
     const hullScore = hull <= 75 ? (75 - hull) * 2.2 : 0;
     const humidityScore = humidity >= 55 ? (humidity - 55) * 1.3 : 0;
+
+    const oxygenScore = oxygen <= 60 ? (60 - oxygen) * 2.0 : 0;
+    const radiationScore = radiation >= 35 ? (radiation - 35) * 1.8 : 0;
 
     const options = [
       {
@@ -32,6 +35,20 @@ export class AI {
         action: 'dehumidify',
         msg: 'CONDENSATION RISK DETECTED — PURGE RECOMMENDED',
         color: '#ffaa00'
+      },
+      {
+        type: 'oxygen',
+        score: oxygenScore,
+        action: 'oxygen',
+        msg: 'OXYGEN RESERVE FALLING — LIFE SUPPORT RECOMMENDED',
+        color: '#66ccff'
+      },
+      {
+        type: 'radiation',
+        score: radiationScore,
+        action: 'radiation',
+        msg: 'RADIATION BUILDUP DETECTED — PURGE RECOMMENDED',
+        color: '#ccff33'
       }
     ];
 
@@ -53,13 +70,16 @@ export class AI {
   }
 
   // Called every frame
-  update(dt, frame, temp, hull, humidity, aiCooldown) {
+  update(dt, frame, temp, hull, humidity, oxygen, radiation, aiCooldown, encounterActive) {
     for (const h of this.history) {
       h.age++;
     }
 
-    const rec = this.getRecommendation(temp, hull, humidity);
+    const rec = this.getRecommendation(temp, hull, humidity, oxygen, radiation);
     this.lastRecommendation = rec;
+
+    // Don't interrupt alien decision prompts
+    if (encounterActive) return;
 
     // only speak every so often so it doesn't spam
     if (frame % 120 !== 0) return;
@@ -75,10 +95,10 @@ export class AI {
   }
 
   // Execute best action based on current recommendation
-  execute(temp, hull, humidity, aiCooldown) {
+  execute(temp, hull, humidity, oxygen, radiation, aiCooldown) {
     if (aiCooldown > 0) return null;
 
-    const rec = this.getRecommendation(temp, hull, humidity);
+    const rec = this.getRecommendation(temp, hull, humidity, oxygen, radiation);
     this.lastRecommendation = rec;
 
     if (rec.action === 'cool') {
@@ -94,6 +114,16 @@ export class AI {
     if (rec.action === 'dehumidify') {
       this.push('AI EXECUTED DEHUMIDIFIER', '#00ffcc');
       return { action: 'dehumidify', cooldown: 320 };
+    }
+
+    if (rec.action === 'oxygen') {
+      this.push('AI EXECUTED LIFE SUPPORT BOOST', '#66ccff');
+      return { action: 'oxygen', cooldown: 420 };
+    }
+
+    if (rec.action === 'radiation') {
+      this.push('AI EXECUTED RADIATION PURGE', '#ccff33');
+      return { action: 'radiation', cooldown: 460 };
     }
 
     this.push('NO ACTION NEEDED — SYSTEMS STABLE', '#00ffcc');

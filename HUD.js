@@ -303,9 +303,8 @@ export class HUD {
     const lineH = fs * 1.72;
     let cy = y + lineH * 0.6;
 
-    // AI message history
     for (const e of game.ai.history) {
-      if (cy > y + h - lineH * 4.4) break;
+      if (cy > y + h - lineH * 2) break;
 
       const alpha = Math.min(
         1,
@@ -345,23 +344,6 @@ export class HUD {
 
     ctx.globalAlpha = 1;
 
-    // Recommendation line
-    if (game.ai.lastRecommendation) {
-      const rec = game.ai.lastRecommendation;
-
-      let actionLabel = 'NONE';
-      if (rec.action === 'cool') actionLabel = 'COOL';
-      else if (rec.action === 'shield') actionLabel = 'SHIELD';
-      else if (rec.action === 'dehumidify') actionLabel = 'PURGE';
-
-      ctx.fillStyle = 'rgba(80,120,140,0.22)';
-      ctx.fillRect(x + 7, y + h - 58, w - 14, 16);
-
-      ctx.fillStyle = rec.color || '#00ffcc';
-      ctx.font = `bold ${Math.round(fs * 0.8)}px 'Courier New'`;
-      ctx.fillText(`RECOMMEND: ${actionLabel}`, x + 10, y + h - 46);
-    }
-
     const bw = w - 18;
 
     if (game.aiCooldown > 0) {
@@ -392,14 +374,14 @@ export class HUD {
         c: game.hull < 30 ? '#ff4400' : game.hull < 60 ? '#ff8800' : '#00ffcc'
       },
       {
-        l: 'TEMPERATURE',
-        v: `${game.temp.toFixed(1)}°C`,
-        c: game.temp > 86 ? '#ff4400' : game.temp > 66 ? '#ff8800' : '#00ccff'
+        l: 'OXYGEN',
+        v: `${game.oxygen.toFixed(0)}%`,
+        c: game.oxygen < 25 ? '#ff4400' : game.oxygen < 50 ? '#ffaa00' : '#66ccff'
       },
       {
-        l: 'HUMIDITY',
-        v: `${game.humidity.toFixed(0)}%`,
-        c: game.humidity > 72 ? '#ff8800' : '#00ffcc'
+        l: 'RADIATION',
+        v: `${game.radiation.toFixed(0)}%`,
+        c: game.radiation > 75 ? '#ccff33' : game.radiation > 45 ? '#ffaa00' : '#00ffcc'
       }
     ];
 
@@ -446,6 +428,98 @@ export class HUD {
     ctx.fillText(`${mm}:${ss}.${ms}`, x + 8, tY + fs * 2.1);
   }
 
+  drawVitals(game) {
+    const ctx = this.ctx;
+    const w = this.W();
+    const h = this.H();
+
+    const x = w * 0.03;
+    const y = h * 0.05;
+    const fs = Math.round(h * 0.016);
+
+    const items = [
+      {
+        label: 'OXYGEN',
+        value: game.oxygen,
+        color: game.oxygen < 25 ? '#ff6644' : game.oxygen < 50 ? '#ffaa00' : '#66ccff',
+        suffix: '%'
+      },
+      {
+        label: 'RADIATION',
+        value: game.radiation,
+        color: game.radiation > 75 ? '#ccff33' : game.radiation > 45 ? '#ffaa00' : '#00ffcc',
+        suffix: '%'
+      },
+      {
+        label: 'HEALTH',
+        value: game.health,
+        color: game.health < 25 ? '#ff4444' : game.health < 55 ? '#ffaa00' : '#00ff99',
+        suffix: '%'
+      }
+    ];
+
+    let offsetY = 0;
+
+    for (const item of items) {
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(x - 8, y + offsetY - 16, 170, 24);
+
+      ctx.fillStyle = item.color;
+      ctx.font = `${fs}px 'Courier New'`;
+      ctx.fillText(`${item.label}: ${Math.round(item.value)}${item.suffix}`, x, y + offsetY);
+
+      offsetY += 26;
+    }
+  }
+
+  drawEncounter(encounter, frame) {
+    if (!encounter || !encounter.active) return;
+
+    const ctx = this.ctx;
+    const w = this.W();
+    const h = this.H();
+
+    const boxW = w * 0.46;
+    const boxH = h * 0.28;
+    const x = (w - boxW) / 2;
+    const y = h * 0.12;
+
+    ctx.save();
+
+    ctx.fillStyle = 'rgba(2,8,18,0.92)';
+    ctx.fillRect(x, y, boxW, boxH);
+
+    ctx.strokeStyle = frame % 20 < 10 ? 'rgba(0,255,200,0.8)' : 'rgba(0,160,255,0.7)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, boxW, boxH);
+
+    ctx.fillStyle = '#00ffcc';
+    ctx.font = `bold ${Math.round(h * 0.026)}px 'Courier New'`;
+    ctx.fillText(encounter.title, x + 18, y + 34);
+
+    ctx.fillStyle = 'rgba(220,240,255,0.9)';
+    ctx.font = `${Math.round(h * 0.019)}px 'Courier New'`;
+    ctx.fillText(encounter.body, x + 18, y + 72);
+
+    if (encounter.aiRecommendation) {
+      ctx.fillStyle = '#99ff66';
+      ctx.font = `bold ${Math.round(h * 0.018)}px 'Courier New'`;
+      ctx.fillText(`AI RECOMMENDS: ${encounter.aiRecommendation}`, x + 18, y + 106);
+    }
+
+    ctx.fillStyle = '#00ccff';
+    ctx.font = `${Math.round(h * 0.02)}px 'Courier New'`;
+    ctx.fillText(`[1] ${encounter.choices[0]}`, x + 18, y + 152);
+    ctx.fillText(`[2] ${encounter.choices[1]}`, x + 18, y + 184);
+    ctx.fillText(`[3] ${encounter.choices[2]}`, x + 18, y + 216);
+
+    ctx.fillStyle = encounter.timer < 120 ? '#ff6644' : '#ffaa00';
+    ctx.font = `bold ${Math.round(h * 0.018)}px 'Courier New'`;
+    ctx.fillText(`TIME LEFT: ${(encounter.timer / 60).toFixed(1)}s`, x + boxW - 150, y + 34);
+
+    ctx.restore();
+  }
+
   // ─── Fog + flicker overlays ───────────────────────────────────────────────
 
   drawFog(fogAlpha, rnd) {
@@ -480,6 +554,23 @@ export class HUD {
       const ly = rnd(0, this.H() * 0.6);
       ctx.fillStyle = `rgba(0,255,180,${flickerAlpha * 0.16})`;
       ctx.fillRect(0, ly, this.W(), rnd(0.5, 3));
+    }
+  }
+
+  drawRadiationOverlay(alpha, rnd) {
+    if (alpha < 0.03) return;
+
+    const ctx = this.ctx;
+    const w = this.W();
+    const h = this.H();
+
+    ctx.fillStyle = `rgba(190,255,60,${alpha * 0.08})`;
+    ctx.fillRect(0, 0, w, h);
+
+    for (let i = 0; i < Math.floor(alpha * 10); i++) {
+      const y = rnd(0, h * 0.6);
+      ctx.fillStyle = `rgba(220,255,120,${alpha * 0.18})`;
+      ctx.fillRect(0, y, w, rnd(1, 3));
     }
   }
 }
