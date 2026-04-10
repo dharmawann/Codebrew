@@ -23,6 +23,7 @@ export class Game {
     this.aiMode = aiMode;
 
     this.planets = Array.from({ length: 5 }, () => new Planet(rnd));
+    this.healthBoosts = Array.from({ length: 4 }, () => new HealthBoost(rnd, true));
 
     // ── Game state ──────────────────────────────────────────────────────────
     this.alive = true;
@@ -120,7 +121,6 @@ export class Game {
     return this.canvas.height;
   }
 
-  // Projects a 3D point to 2D screen space
   project(x, y, z) {
     if (z < 1) return null;
 
@@ -270,8 +270,6 @@ export class Game {
     }
   }
 
-  // ── AI ────────────────────────────────────────────────────────────────────
-
   executeAI() {
     const result = this.ai.execute(
       this.temp,
@@ -307,8 +305,6 @@ export class Game {
       this.radiationFlash = 0.15;
     }
   }
-
-  // ── Splash screen animation ───────────────────────────────────────────────
 
   animateSplash(sc) {
     const sctx = sc.getContext('2d');
@@ -349,15 +345,12 @@ export class Game {
     this._stopSplash = () => cancelAnimationFrame(splashRaf);
   }
 
-  // ── Update ────────────────────────────────────────────────────────────────
-
   update(dt) {
     if (!this.alive) return;
 
     this.frame++;
     this.survivalTime += dt / 60;
 
-    // Timers
     this.aiCooldown = Math.max(0, this.aiCooldown - dt);
     this.shieldActive = Math.max(0, this.shieldActive - dt);
     this.coolActive = Math.max(0, this.coolActive - dt);
@@ -366,15 +359,12 @@ export class Game {
 
     this.applyStatusEffects(dt);
 
-    // Ship
     this.ship.update(this.keys, dt, clamp, this.W(), this.H());
 
-    // Freeze slowdown on overall speed feel
     const slowFactor = this.freezeTimer > 0
       ? clamp(1 - this.freezeStrength * 0.55, 0.45, 1)
       : 1;
 
-    // Speed ramp
     const accelerating = this.keys['shift'];
 
     if (accelerating) {
@@ -385,7 +375,6 @@ export class Game {
 
     this.speed = Math.max(0, this.speed);
 
-    // Temperature
     const moving =
       this.keys['w'] ||
       this.keys['a'] ||
@@ -401,7 +390,6 @@ export class Game {
     this.temp += (tgt - this.temp) * 0.002 * dt;
     this.temp = clamp(this.temp, 18, 135);
 
-    // Humidity + fog
     if (Math.random() < 0.004 * dt) {
       this.humidity += rnd(-5, 7);
     }
@@ -409,7 +397,6 @@ export class Game {
     this.humidity = clamp(this.humidity, 18, 100);
     this.fogAlpha = clamp((this.humidity - 63) / 37, 0, 0.75);
 
-    // Oxygen drain
     let oxygenDrain = 0.02 * dt;
     if (moving) oxygenDrain += 0.018 * dt;
     if (this.temp > 90) oxygenDrain += 0.025 * dt;
@@ -417,7 +404,6 @@ export class Game {
 
     this.oxygen = clamp(this.oxygen - oxygenDrain, 0, 100);
 
-    // Radiation buildup / decay
     if (Math.random() < 0.0028 * dt) {
       this.radiation += rnd(2, 6);
     }
@@ -436,12 +422,10 @@ export class Game {
       this.radiationFlash = Math.min(0.22, this.radiationFlash + 0.005 * dt);
     }
 
-    // Hull heat decay
     if (this.temp > 88 && this.shieldActive <= 0) {
       this.hull -= 0.022 * dt * (this.temp - 88) / 84;
     }
 
-    // Health decay
     if (this.oxygen < 22) {
       this.health -= 0.05 * dt * (22 - this.oxygen) / 22;
     }
@@ -468,7 +452,6 @@ export class Game {
       return;
     }
 
-    // History buffers
     this.tempHistory.push(this.temp);
     if (this.tempHistory.length > 60) {
       this.tempHistory.shift();
@@ -489,17 +472,58 @@ export class Game {
       this.radiationHistory.shift();
     }
 
-    // Stars
     for (const s of this.stars) {
       s.update(this.speed, dt, rnd);
     }
 
-    // Planets
     for (const p of this.planets) {
       p.update(this.speed, dt, rnd);
     }
 
-    // Asteroids
+    for (const hb of this.healthBoosts) {
+      hb.update(this.speed, dt, rnd);
+
+      const p = this.project(hb.x, hb.y, hb.z);
+      if (!p || !hb.active) continue;
+
+      const hitR = hb.size * p.scale * 0.95;
+      const dx = p.x - this.W() / 2;
+      const dy = p.y - this.H() / 2;
+
+      if (
+        Math.abs(dx) < hitR + 10 &&
+        Math.abs(dy) < hitR + 10 &&
+        hb.z < 180 &&
+        hb.z > -40
+      ) {
+        const heal = hb.collect();
+
+        this.hull = Math.min(100, this.hull + heal);
+        this.health = Math.min(100, this.health + heal * 0.6);
+
+        for (let i = 0; i < 12; i++) {
+          this.particles.push(
+            new Particle(
+              this.W() / 2,
+              this.H() / 2,
+              rnd(-4, 4),
+              rnd(-4, 4),
+              28,
+              i % 2 === 0 ? '#7dffbf' : '#d7fff0'
+            )
+          );
+        }
+
+        this.showEffectText(`+${heal}% HULL`, '#7dffbf');
+
+        if (this.aiMode) {
+          this.ai.push(`HEALTH BOOST COLLECTED +${heal}%`, '#7dffbf');
+        }
+
+        hb.respawn(rnd);
+      }
+    }
+
     for (const a of this.asteroids) {
       const asteroidSpeed = this.speed * (1 + this.survivalTime * 0.015);
 
@@ -532,7 +556,6 @@ export class Game {
       }
     }
 
-    // Particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       this.particles[i].update();
 
@@ -541,7 +564,6 @@ export class Game {
       }
     }
 
-    // Effects
     if (this.flickerAlpha > 0) {
       this.flickerAlpha -= 0.035 * dt;
     }
@@ -550,7 +572,6 @@ export class Game {
       this.flickerAlpha = rnd(0.2, 0.55);
     }
 
-    // AI advisor
     if (this.aiMode) {
       this.ai.update(
         dt,
@@ -585,7 +606,6 @@ export class Game {
 
       this.applyAsteroidEffect(a);
 
-      // small extra oxygen/radiation consequences from impacts
       this.oxygen = Math.max(0, this.oxygen - rnd(1, 4));
       this.radiation = clamp(this.radiation + rnd(0.5, 2.5), 0, 100);
 
@@ -637,8 +657,6 @@ export class Game {
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   render() {
     const ctx = this.ctx;
     const w = this.W();
@@ -654,33 +672,30 @@ export class Game {
     ctx.save();
     ctx.translate(jx, jy);
 
-    // Stars
     for (const s of this.stars) {
       s.draw(ctx, this.project.bind(this), this.speed, w, h);
     }
 
-    // Planets
     for (const p of this.planets) {
       p.draw(ctx, this.project.bind(this));
     }
 
-    // Asteroids (back to front)
+    for (const hb of this.healthBoosts) {
+      hb.draw(ctx, this.project.bind(this), clamp);
+    }
+
     [...this.asteroids]
       .sort((a, b) => b.z - a.z)
       .forEach((a) => a.draw(ctx, this.project.bind(this), clamp));
 
-    // Cockpit frame
     this.hud.drawCockpit();
 
-    // Particles
     for (const p of this.particles) {
       p.draw(ctx);
     }
 
-    // MFD panels
     this.hud.drawMFDs(this);
 
-    // Crosshair + HUD text
     this.hud.drawHUD(
       this.hull,
       this.speed,
@@ -690,10 +705,8 @@ export class Game {
       this.frame
     );
 
-    // Extra HUD
     this.hud.drawVitals(this);
 
-    // Overlays
     this.hud.drawFog(this.fogAlpha, rnd);
     this.hud.drawFlicker(this.flickerAlpha, rnd);
     this.hud.drawRadiationOverlay(this.radiation / 100 + this.radiationFlash, rnd);
@@ -702,7 +715,6 @@ export class Game {
     ctx.restore();
   }
 
-  // Clean up event listeners when game ends
   destroy() {
     document.removeEventListener('keydown', this._onKeyDown);
     document.removeEventListener('keyup', this._onKeyUp);
