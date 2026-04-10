@@ -258,7 +258,13 @@ export class Game {
     // Asteroids
     for (const a of this.asteroids) {
       const asteroidSpeed = this.speed * (1 + this.survivalTime * 0.015);
-      a.update(asteroidSpeed, dt, rnd);
+      a.update(
+        asteroidSpeed,
+        dt,
+        rnd,
+        this.ship.x + this.ship.vx * 10,
+        this.ship.y + this.ship.vy * 10
+      );
 
       const p = this.project(a.x, a.y, a.z);
       if (!p) continue;
