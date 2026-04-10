@@ -232,8 +232,8 @@ export class Game {
     this.fogAlpha = clamp((this.humidity - 63) / 37, 0, 0.75);
 
     // Hull heat decay
-    if (this.temp > 250 && this.shieldActive <= 0) {
-      this.hull -= 0.022 * dt * (this.temp - 250) / 84;
+    if (this.temp > 88 && this.shieldActive <= 0) {
+      this.hull -= 0.022 * dt * (this.temp - 88) / 84;
     }
 
     if (this.hull <= 0) {
