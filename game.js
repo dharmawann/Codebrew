@@ -31,14 +31,21 @@ export class Game {
     this.hull = 100;
     this.temp = 22;
     this.humidity = 45;
+    this.oxygen = 100;
+    this.radiation = 0;
+    this.health = 100;
     this.fogAlpha = 0;
     this.flickerAlpha = 0;
     this.jitter = 0;
     this.shieldActive = 0;
     this.coolActive = 0;
     this.aiCooldown = 0;
+    this.radiationFlash = 0;
+
     this.tempHistory = Array(60).fill(22);
     this.humHistory = Array(60).fill(45);
+    this.oxygenHistory = Array(60).fill(100);
+    this.radiationHistory = Array(60).fill(0);
 
     // ── Asteroid hit effects ────────────────────────────────────────────────
     this.burnTimer = 0;
@@ -48,6 +55,11 @@ export class Game {
     this.effectText = '';
     this.effectTextColor = '#ffffff';
     this.effectTextTimer = 0;
+
+    // ── Placeholder for later alien encounter integration ───────────────────
+    this.encounter = {
+      active: false
+    };
 
     // ── Objects ─────────────────────────────────────────────────────────────
     this.ship = new Ship();
@@ -264,6 +276,8 @@ export class Game {
       this.temp,
       this.hull,
       this.humidity,
+      this.oxygen,
+      this.radiation,
       this.aiCooldown
     );
 
@@ -281,6 +295,15 @@ export class Game {
 
     if (result.action === 'dehumidify') {
       this.humidity = Math.max(28, this.humidity - 28);
+    }
+
+    if (result.action === 'oxygen') {
+      this.oxygen = Math.min(100, this.oxygen + 26);
+    }
+
+    if (result.action === 'radiation') {
+      this.radiation = Math.max(0, this.radiation - 24);
+      this.radiationFlash = 0.15;
     }
   }
 
@@ -338,6 +361,7 @@ export class Game {
     this.shieldActive = Math.max(0, this.shieldActive - dt);
     this.coolActive = Math.max(0, this.coolActive - dt);
     this.jitter = Math.max(0, this.jitter - 0.45 * dt);
+    this.radiationFlash = Math.max(0, this.radiationFlash - 0.01 * dt);
 
     this.applyStatusEffects(dt);
 
@@ -384,13 +408,61 @@ export class Game {
     this.humidity = clamp(this.humidity, 18, 100);
     this.fogAlpha = clamp((this.humidity - 63) / 37, 0, 0.75);
 
+    // Oxygen drain
+    let oxygenDrain = 0.02 * dt;
+    if (moving) oxygenDrain += 0.018 * dt;
+    if (this.temp > 90) oxygenDrain += 0.025 * dt;
+    if (this.burnTimer > 0) oxygenDrain += 0.01 * dt;
+
+    this.oxygen = clamp(this.oxygen - oxygenDrain, 0, 100);
+
+    // Radiation buildup / decay
+    if (Math.random() < 0.0028 * dt) {
+      this.radiation += rnd(2, 6);
+    }
+
+    if (this.temp > 96) {
+      this.radiation += 0.012 * dt;
+    }
+
+    if (this.burnTimer > 0) {
+      this.radiation += 0.015 * dt;
+    }
+
+    this.radiation = clamp(this.radiation - 0.01 * dt, 0, 100);
+
+    if (this.radiation > 70) {
+      this.radiationFlash = Math.min(0.22, this.radiationFlash + 0.005 * dt);
+    }
+
     // Hull heat decay
     if (this.temp > 88 && this.shieldActive <= 0) {
       this.hull -= 0.022 * dt * (this.temp - 88) / 84;
     }
 
+    // Health decay
+    if (this.oxygen < 22) {
+      this.health -= 0.05 * dt * (22 - this.oxygen) / 22;
+    }
+
+    if (this.radiation > 72) {
+      this.health -= 0.04 * dt * (this.radiation - 72) / 28;
+    }
+
+    if (this.temp > 108) {
+      this.health -= 0.03 * dt;
+    }
+
+    this.health = clamp(this.health, 0, 100);
+
     if (this.hull <= 0) {
       this.hull = 0;
+      this.alive = false;
+      return;
+    }
+
+    if (this.health <= 0) {
+      this.health = 0;
       this.alive = false;
       return;
     }
@@ -404,6 +476,16 @@ export class Game {
     this.humHistory.push(this.humidity);
     if (this.humHistory.length > 60) {
       this.humHistory.shift();
+    }
+
+    this.oxygenHistory.push(this.oxygen);
+    if (this.oxygenHistory.length > 60) {
+      this.oxygenHistory.shift();
+    }
+
+    this.radiationHistory.push(this.radiation);
+    if (this.radiationHistory.length > 60) {
+      this.radiationHistory.shift();
     }
 
     // Stars
@@ -475,7 +557,10 @@ export class Game {
         this.temp,
         this.hull,
         this.humidity,
-        this.aiCooldown
+        this.oxygen,
+        this.radiation,
+        this.aiCooldown,
+        this.encounter.active
       );
     }
   }
@@ -493,11 +578,15 @@ export class Game {
       a.z = rnd(1500, 2200);
       a.x = rnd(-1700, 1700);
     } else {
-      const dmg = (7 + a.size * 0.28) * (this.speed+18)/25; // faster ship causes harder impact
+      const dmg = (7 + a.size * 0.28) * (this.speed + 18) / 25;
       this.hull = Math.max(0, this.hull - dmg);
       this.jitter = 15;
 
       this.applyAsteroidEffect(a);
+
+      // small extra oxygen/radiation consequences from impacts
+      this.oxygen = Math.max(0, this.oxygen - rnd(1, 4));
+      this.radiation = clamp(this.radiation + rnd(0.5, 2.5), 0, 100);
 
       for (let i = 0; i < 14; i++) {
         let particleCol = i % 2 === 0 ? '#ff4400' : '#ff8800';
@@ -600,9 +689,13 @@ export class Game {
       this.frame
     );
 
+    // Extra HUD
+    this.hud.drawVitals(this);
+
     // Overlays
     this.hud.drawFog(this.fogAlpha, rnd);
     this.hud.drawFlicker(this.flickerAlpha, rnd);
+    this.hud.drawRadiationOverlay(this.radiation / 100 + this.radiationFlash, rnd);
     this.drawStatusEffectOverlays();
 
     ctx.restore();
