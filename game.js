@@ -4,7 +4,7 @@ import { Asteroid } from './Asteroid.js';
 import { Particle } from './Particle.js';
 import { AI } from './AI.js';
 import { HUD } from './HUD.js';
-import { Planet } from './planet.js';
+import { Planet } from './Planet.js';
 
 // ─── Utility functions ────────────────────────────────────────────────────────
 function rnd(a, b) {
