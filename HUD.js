@@ -3,14 +3,8 @@ export class HUD {
     this.ctx = ctx;
   }
 
-  // Helpers
-  W() {
-    return this.ctx.canvas.width;
-  }
-
-  H() {
-    return this.ctx.canvas.height;
-  }
+  W() { return this.ctx.canvas.width; }
+  H() { return this.ctx.canvas.height; }
 
   // ─── Cockpit frame ────────────────────────────────────────────────────────
 
@@ -48,21 +42,13 @@ export class HUD {
 
     ctx.strokeStyle = 'rgba(0,200,255,0.13)';
     ctx.lineWidth = 0.5;
-
     for (let i = 0; i < 15; i++) {
       const x = (w * i) / 15;
-      ctx.beginPath();
-      ctx.moveTo(x, vH);
-      ctx.lineTo(x, h);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, vH); ctx.lineTo(x, h); ctx.stroke();
     }
-
     for (let i = 0; i < 7; i++) {
       const y = vH + ((h - vH) * i) / 7;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
     }
   }
 
@@ -76,17 +62,13 @@ export class HUD {
 
     ctx.strokeStyle = col;
     ctx.lineWidth = 1;
-
     [
       [cx - 30, cy, cx - 9, cy],
       [cx + 9, cy, cx + 30, cy],
       [cx, cy - 30, cx, cy - 9],
       [cx, cy + 9, cx, cy + 30]
     ].forEach(([x1, y1, x2, y2]) => {
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     });
 
     if (shieldActive > 0) {
@@ -99,11 +81,9 @@ export class HUD {
     }
 
     const fs = Math.round(this.H() * 0.018);
-
     ctx.fillStyle = 'rgba(0,255,185,.52)';
     ctx.font = `${fs}px 'Courier New'`;
     ctx.fillText(`HULL: ${hull.toFixed(0)}%`, cx + 38, cy + 6);
-
     ctx.fillStyle = 'rgba(0,205,255,.42)';
     ctx.fillText(`${speed.toFixed(2)} km/s`, cx + 38, cy - 20);
 
@@ -145,33 +125,22 @@ export class HUD {
 
       ctx.fillStyle = 'rgba(0,5,13,.94)';
       ctx.fillRect(p.x, dY, dW, dH);
-
       ctx.strokeStyle = bc;
       ctx.lineWidth = crit ? 2 : 1;
       ctx.strokeRect(p.x, dY, dW, dH);
 
       const hH = h * 0.034;
-
       ctx.fillStyle = crit ? 'rgba(55,0,0,.65)' : 'rgba(0,18,28,.72)';
       ctx.fillRect(p.x, dY, dW, hH);
 
       ctx.fillStyle = crit ? '#ff4400' : 'rgba(0,215,255,.82)';
       ctx.font = `bold ${fs}px 'Courier New'`;
-
-      const lbl = {
-        eng: 'ENGINEERING',
-        neural: 'NEURAL LINK',
-        nav: 'NAV & FLIGHT'
-      };
-
+      const lbl = { eng: 'ENGINEERING', neural: 'NEURAL LINK', nav: 'NAV & FLIGHT' };
       ctx.fillText(lbl[p.type], p.x + 8, dY + hH * 0.74);
 
-      const tag =
-        p.type === 'neural'
-          ? (game.aiMode ? 'AI ACTIVE' : 'OFFLINE')
-          : p.type === 'nav'
-            ? `${game.speed.toFixed(1)} km/s`
-            : '';
+      const tag = p.type === 'neural'
+        ? (game.aiMode ? 'AI ACTIVE' : 'OFFLINE')
+        : p.type === 'nav' ? `${game.speed.toFixed(1)} km/s` : '';
 
       ctx.fillStyle = '#334';
       ctx.font = `${Math.round(fs * 0.78)}px 'Courier New'`;
@@ -197,19 +166,16 @@ export class HUD {
 
     const pw = w - 18;
     const ph = Math.round(h * 0.21);
-
     const labels = ['TEMPERATURE (°C)', 'HUMIDITY (%)'];
     const cols = [
       game.temp > 86 ? '#ff2200' : game.temp > 68 ? '#ff8800' : '#00ccff',
       game.humidity > 72 ? '#ff8800' : '#00ffcc'
     ];
-
     const hists = [game.tempHistory, game.humHistory];
     const disp = [game.temp.toFixed(1) + '°', game.humidity.toFixed(0) + '%'];
 
     for (let i = 0; i < 2; i++) {
       const ly = y + 10 + i * (ph + h * 0.09);
-
       ctx.fillStyle = '#223';
       ctx.font = `${Math.round(fs * 0.83)}px 'Courier New'`;
       ctx.fillText(labels[i], x + 9, ly + fs);
@@ -225,22 +191,18 @@ export class HUD {
 
       const arr = hists[i];
       const maxV = i === 0 ? 135 : 100;
-
       ctx.beginPath();
       arr.forEach((v, j) => {
         const bx = x + 9 + (j / 59) * pw;
         const by = ly + fs + 5 + ph * (1 - v / maxV);
-        if (j === 0) ctx.moveTo(bx, by);
-        else ctx.lineTo(bx, by);
+        if (j === 0) ctx.moveTo(bx, by); else ctx.lineTo(bx, by);
       });
-
       ctx.strokeStyle = cols[i];
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
 
     const warningY = y + h * 0.78;
-
     if (tempCritical) {
       ctx.fillStyle = game.frame % 8 < 4 ? '#ff4400' : '#660000';
       ctx.font = `bold ${Math.round(fs * 0.9)}px 'Courier New'`;
@@ -261,7 +223,6 @@ export class HUD {
       g.addColorStop(1, `rgba(110,175,158,${fog * 0.42})`);
       ctx.fillStyle = g;
       ctx.fillRect(x, y, w, h);
-
       ctx.fillStyle = `rgba(200,245,225,${fog * 0.55})`;
       ctx.font = `bold ${Math.round(fs * 0.9)}px 'Courier New'`;
       ctx.textAlign = 'center';
@@ -276,7 +237,6 @@ export class HUD {
     if (!game.aiMode) {
       ctx.fillStyle = 'rgba(255,30,0,.03)';
       ctx.fillRect(x, y, w, h);
-
       for (let i = 0; i < 8; i++) {
         if (Math.random() < 0.45) {
           const gy = y + Math.random() * h;
@@ -285,17 +245,12 @@ export class HUD {
           ctx.fillRect(x + Math.random() * (w - gw), gy, gw, 1.5);
         }
       }
-
       ctx.fillStyle = 'rgba(255,40,0,.52)';
       ctx.font = `bold ${fs}px 'Courier New'`;
       ctx.textAlign = 'center';
-
       ['NEURAL LINK', 'OFFLINE', '', 'STATIC MODE', '--- NO DATA ---'].forEach((l, i) => {
-        if (l && Math.random() > 0.04) {
-          ctx.fillText(l, x + w / 2, y + h * 0.22 + i * fs * 1.9);
-        }
+        if (l && Math.random() > 0.04) ctx.fillText(l, x + w / 2, y + h * 0.22 + i * fs * 1.9);
       });
-
       ctx.textAlign = 'left';
       return;
     }
@@ -305,26 +260,17 @@ export class HUD {
 
     for (const e of game.ai.history) {
       if (cy > y + h - lineH * 2) break;
-
-      const alpha = Math.min(
-        1,
-        e.age < 22
-          ? e.age / 22
-          : e.age > 210
-            ? Math.max(0, 1 - (e.age - 210) / 75)
-            : 1
+      const alpha = Math.min(1,
+        e.age < 22 ? e.age / 22 : e.age > 210 ? Math.max(0, 1 - (e.age - 210) / 75) : 1
       );
-
       ctx.globalAlpha = alpha;
       ctx.fillStyle = e.col;
       ctx.font = `${Math.round(fs * 0.88)}px 'Courier New'`;
 
       const words = e.msg.split(' ');
       let line = '';
-
       for (const word of words) {
         const test = line + (line ? ' ' : '') + word;
-
         if (ctx.measureText(test).width > w - 18 && line) {
           ctx.fillText(line, x + 9, cy);
           cy += lineH;
@@ -333,26 +279,18 @@ export class HUD {
           line = test;
         }
       }
-
-      if (line) {
-        ctx.fillText(line, x + 9, cy);
-        cy += lineH;
-      }
-
+      if (line) { ctx.fillText(line, x + 9, cy); cy += lineH; }
       cy += 5;
     }
 
     ctx.globalAlpha = 1;
-
     const bw = w - 18;
 
     if (game.aiCooldown > 0) {
       ctx.fillStyle = 'rgba(0,28,48,.85)';
       ctx.fillRect(x + 9, y + h - 22, bw, 10);
-
       ctx.fillStyle = '#0099ff';
       ctx.fillRect(x + 9, y + h - 22, bw * (1 - game.aiCooldown / 540), 10);
-
       ctx.fillStyle = '#334';
       ctx.font = `${Math.round(fs * 0.75)}px 'Courier New'`;
       ctx.fillText('[E] RECHARGING...', x + 9, y + h - 25);
@@ -365,35 +303,19 @@ export class HUD {
 
   _drawNav(x, y, w, h, fs, game) {
     const ctx = this.ctx;
-
     const items = [
       { l: 'SPEED', v: `${game.speed.toFixed(2)} km/s`, c: '#00ccff' },
-      {
-        l: 'HULL INTEGRITY',
-        v: `${game.hull.toFixed(1)}%`,
-        c: game.hull < 30 ? '#ff4400' : game.hull < 60 ? '#ff8800' : '#00ffcc'
-      },
-      {
-        l: 'OXYGEN',
-        v: `${game.oxygen.toFixed(0)}%`,
-        c: game.oxygen < 25 ? '#ff4400' : game.oxygen < 50 ? '#ffaa00' : '#66ccff'
-      },
-      {
-        l: 'RADIATION',
-        v: `${game.radiation.toFixed(0)}%`,
-        c: game.radiation > 75 ? '#ccff33' : game.radiation > 45 ? '#ffaa00' : '#00ffcc'
-      }
+      { l: 'HULL INTEGRITY', v: `${game.hull.toFixed(1)}%`, c: game.hull < 30 ? '#ff4400' : game.hull < 60 ? '#ff8800' : '#00ffcc' },
+      { l: 'OXYGEN', v: `${game.oxygen.toFixed(0)}%`, c: game.oxygen < 25 ? '#ff4400' : game.oxygen < 50 ? '#ffaa00' : '#66ccff' },
+      { l: 'RADIATION', v: `${game.radiation.toFixed(0)}%`, c: game.radiation > 75 ? '#ccff33' : game.radiation > 45 ? '#ffaa00' : '#00ffcc' }
     ];
 
     const lineH = h * 0.145;
-
     items.forEach((item, i) => {
       const iy = y + 8 + i * lineH;
-
       ctx.fillStyle = '#334';
       ctx.font = `${Math.round(fs * 0.8)}px 'Courier New'`;
       ctx.fillText(item.l, x + 8, iy + fs * 0.9);
-
       ctx.fillStyle = item.c;
       ctx.font = `bold ${Math.round(fs * 1.06)}px 'Courier New'`;
       ctx.fillText(item.v, x + 8, iy + fs * 1.95);
@@ -401,14 +323,11 @@ export class HUD {
 
     const bW = w - 16;
     const bY = y + h * 0.66;
-
     ctx.fillStyle = '#223';
     ctx.font = `${Math.round(fs * 0.8)}px 'Courier New'`;
     ctx.fillText('HULL STATUS', x + 8, bY);
-
     ctx.fillStyle = 'rgba(0,28,48,.85)';
     ctx.fillRect(x + 8, bY + 5, bW, 9);
-
     ctx.fillStyle = game.hull < 30 ? '#ff4400' : game.hull < 60 ? '#ff8800' : '#00ffcc';
     ctx.fillRect(x + 8, bY + 5, (bW * game.hull) / 100, 9);
 
@@ -416,13 +335,10 @@ export class HUD {
     const mm = Math.floor(t / 60).toString().padStart(2, '0');
     const ss = Math.floor(t % 60).toString().padStart(2, '0');
     const ms = Math.floor((t * 10) % 10);
-
     const tY = y + h * 0.78;
-
     ctx.fillStyle = '#334';
     ctx.font = `${Math.round(fs * 0.8)}px 'Courier New'`;
     ctx.fillText('SURVIVAL TIME', x + 8, tY);
-
     ctx.fillStyle = '#00ffcc';
     ctx.font = `bold ${Math.round(fs * 1.65)}px 'Courier New'`;
     ctx.fillText(`${mm}:${ss}.${ms}`, x + 8, tY + fs * 2.1);
@@ -432,63 +348,38 @@ export class HUD {
     const ctx = this.ctx;
     const w = this.W();
     const h = this.H();
-
     const x = w * 0.03;
     const y = h * 0.05;
     const fs = Math.round(h * 0.016);
 
     const items = [
-      {
-        label: 'OXYGEN',
-        value: game.oxygen,
-        color: game.oxygen < 25 ? '#ff6644' : game.oxygen < 50 ? '#ffaa00' : '#66ccff',
-        suffix: '%'
-      },
-      {
-        label: 'RADIATION',
-        value: game.radiation,
-        color: game.radiation > 75 ? '#ccff33' : game.radiation > 45 ? '#ffaa00' : '#00ffcc',
-        suffix: '%'
-      },
-      {
-        label: 'HEALTH',
-        value: game.health,
-        color: game.health < 25 ? '#ff4444' : game.health < 55 ? '#ffaa00' : '#00ff99',
-        suffix: '%'
-      }
+      { label: 'OXYGEN', value: game.oxygen, color: game.oxygen < 25 ? '#ff6644' : game.oxygen < 50 ? '#ffaa00' : '#66ccff', suffix: '%' },
+      { label: 'RADIATION', value: game.radiation, color: game.radiation > 75 ? '#ccff33' : game.radiation > 45 ? '#ffaa00' : '#00ffcc', suffix: '%' },
+      { label: 'HEALTH', value: game.health, color: game.health < 25 ? '#ff4444' : game.health < 55 ? '#ffaa00' : '#00ff99', suffix: '%' }
     ];
 
     let offsetY = 0;
-
     for (const item of items) {
       ctx.fillStyle = 'rgba(0,0,0,0.35)';
       ctx.fillRect(x - 8, y + offsetY - 16, 170, 24);
-
       ctx.fillStyle = item.color;
       ctx.font = `${fs}px 'Courier New'`;
       ctx.fillText(`${item.label}: ${Math.round(item.value)}${item.suffix}`, x, y + offsetY);
-
       offsetY += 26;
     }
   }
 
   drawEncounter(encounter, frame) {
     if (!encounter || !encounter.active) return;
-
     const ctx = this.ctx;
     const w = this.W();
     const h = this.H();
-
-    const boxW = w * 0.46;
-    const boxH = h * 0.28;
-    const x = (w - boxW) / 2;
-    const y = h * 0.12;
+    const boxW = w * 0.46, boxH = h * 0.28;
+    const x = (w - boxW) / 2, y = h * 0.12;
 
     ctx.save();
-
     ctx.fillStyle = 'rgba(2,8,18,0.92)';
     ctx.fillRect(x, y, boxW, boxH);
-
     ctx.strokeStyle = frame % 20 < 10 ? 'rgba(0,255,200,0.8)' : 'rgba(0,160,255,0.7)';
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, boxW, boxH);
@@ -516,25 +407,16 @@ export class HUD {
     ctx.fillStyle = encounter.timer < 120 ? '#ff6644' : '#ffaa00';
     ctx.font = `bold ${Math.round(h * 0.018)}px 'Courier New'`;
     ctx.fillText(`TIME LEFT: ${(encounter.timer / 60).toFixed(1)}s`, x + boxW - 150, y + 34);
-
     ctx.restore();
   }
 
-  // ─── Fog + flicker overlays ───────────────────────────────────────────────
-
   drawFog(fogAlpha, rnd) {
     if (fogAlpha < 0.05) return;
-
     const ctx = this.ctx;
-    const w = this.W();
-    const h = this.H();
-    const vH = h * 0.60;
-
+    const w = this.W(), h = this.H(), vH = h * 0.60;
     ctx.fillStyle = `rgba(160,215,195,${fogAlpha * 0.32})`;
     ctx.fillRect(0, 0, w, vH);
-
     const lines = Math.floor(fogAlpha * 12);
-
     for (let i = 0; i < lines; i++) {
       const fy = Math.random() * vH;
       ctx.fillStyle = `rgba(200,240,220,${fogAlpha * 0.12})`;
@@ -544,12 +426,9 @@ export class HUD {
 
   drawFlicker(flickerAlpha, rnd) {
     if (flickerAlpha < 0.01) return;
-
     const ctx = this.ctx;
-
     ctx.fillStyle = `rgba(0,205,255,${flickerAlpha * 0.055})`;
     ctx.fillRect(0, 0, this.W(), this.H());
-
     for (let i = 0; i < Math.floor(rnd(1, 5)); i++) {
       const ly = rnd(0, this.H() * 0.6);
       ctx.fillStyle = `rgba(0,255,180,${flickerAlpha * 0.16})`;
@@ -559,14 +438,10 @@ export class HUD {
 
   drawRadiationOverlay(alpha, rnd) {
     if (alpha < 0.03) return;
-
     const ctx = this.ctx;
-    const w = this.W();
-    const h = this.H();
-
+    const w = this.W(), h = this.H();
     ctx.fillStyle = `rgba(190,255,60,${alpha * 0.08})`;
     ctx.fillRect(0, 0, w, h);
-
     for (let i = 0; i < Math.floor(alpha * 10); i++) {
       const y = rnd(0, h * 0.6);
       ctx.fillStyle = `rgba(220,255,120,${alpha * 0.18})`;

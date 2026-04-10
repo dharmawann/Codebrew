@@ -1,50 +1,108 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="UTF-8">
-<title>COSMOS-OS: Survival Command</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;background:#000;overflow:hidden}
-canvas{display:block;width:100%;height:100%}
-#splash{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10}
-#gameover{position:absolute;inset:0;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:10}
-button{cursor:pointer}
-</style>
+  <meta charset="UTF-8">
+  <title>COSMOS-OS: Survival Command</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%
+    }
+
+    #splash {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10
+    }
+
+    #gameover {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, .92);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10
+    }
+
+    button {
+      cursor: pointer
+    }
+  </style>
 </head>
+
 <body>
-<canvas id="c"></canvas>
-<div id="splash">
-  <canvas id="sc" style="position:absolute;inset:0;width:100%;height:100%;z-index:0"></canvas>
-  <div style="position:relative;z-index:1;text-align:center;font-family:'Courier New',monospace;color:#00ffcc;padding:20px">
-    <div style="font-size:clamp(24px,5vw,56px);letter-spacing:10px;margin-bottom:8px">COSMOS-OS</div>
-    <div style="font-size:clamp(11px,1.6vw,16px);letter-spacing:4px;color:#336655;margin-bottom:4px">SURVIVAL COMMAND </div>
-    <div style="font-size:clamp(9px,1.2vw,13px);letter-spacing:3px;color:#224433;margin-bottom:36px">DEEP SPACE MISSION: URANUS</div>
-    <div style="border:1px solid #00332244;padding:28px 40px;background:rgba(0,20,15,.75)">
-      <div style="font-size:clamp(10px,1.3vw,13px);color:#445;letter-spacing:2px;margin-bottom:22px">SELECT MISSION PROFILE</div>
-      <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap">
-        <button onclick="startGame(true)" style="padding:15px 32px;background:transparent;border:1px solid #00ffcc;color:#00ffcc;font-family:'Courier New',monospace;font-size:clamp(11px,1.4vw,14px);letter-spacing:2px">[1] PILOT + AI ASSIST</button>
-        <button onclick="startGame(false)" style="padding:15px 32px;background:transparent;border:1px solid #ff4400;color:#ff4400;font-family:'Courier New',monospace;font-size:clamp(11px,1.4vw,14px);letter-spacing:2px">[2] MANUAL PILOT</button>
+  <canvas id="c"></canvas>
+  <div id="splash">
+    <canvas id="sc" style="position:absolute;inset:0;width:100%;height:100%;z-index:0"></canvas>
+    <div
+      style="position:relative;z-index:1;text-align:center;font-family:'Courier New',monospace;color:#00ffcc;padding:20px">
+      <div style="font-size:clamp(24px,5vw,56px);letter-spacing:10px;margin-bottom:8px">COSMOS-OS</div>
+      <div style="font-size:clamp(11px,1.6vw,16px);letter-spacing:4px;color:#336655;margin-bottom:4px">SURVIVAL COMMAND
       </div>
-      <div style="margin-top:22px;font-size:clamp(9px,1.1vw,12px);color:#334;letter-spacing:1px;line-height:2">
-        WASD — DODGE ASTEROIDS &nbsp;|&nbsp; E — EXECUTE AI REC (AI MODE ONLY)<br>SURVIVE AS LONG AS POSSIBLE
+      <div style="font-size:clamp(9px,1.2vw,13px);letter-spacing:3px;color:#224433;margin-bottom:36px">DEEP SPACE
+        MISSION: URANUS</div>
+      <div style="border:1px solid #00332244;padding:28px 40px;background:rgba(0,20,15,.75)">
+        <div style="font-size:clamp(10px,1.3vw,13px);color:#445;letter-spacing:2px;margin-bottom:22px">SELECT MISSION
+          PROFILE</div>
+        <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap">
+          <button onclick="startGame(true)"
+            style="padding:15px 32px;background:transparent;border:1px solid #00ffcc;color:#00ffcc;font-family:'Courier New',monospace;font-size:clamp(11px,1.4vw,14px);letter-spacing:2px">[1]
+            PILOT + AI ASSIST</button>
+          <button onclick="startGame(false)"
+            style="padding:15px 32px;background:transparent;border:1px solid #ff4400;color:#ff4400;font-family:'Courier New',monospace;font-size:clamp(11px,1.4vw,14px);letter-spacing:2px">[2]
+            MANUAL PILOT</button>
+        </div>
+        <div style="margin-top:22px;font-size:clamp(9px,1.1vw,12px);color:#334;letter-spacing:1px;line-height:2.2">
+          WASD — DODGE &nbsp;|&nbsp; SHIFT — ACCELERATE &nbsp;|&nbsp; E — AI EXECUTE<br>
+          T — COOLING VENTS &nbsp;|&nbsp; R — SHIELD MATRIX &nbsp;|&nbsp; D — DEHUMIDIFIER<br>
+          ESC — CANCEL MINIGAME
+        </div>
       </div>
     </div>
   </div>
-</div>
-<div id="gameover">
-  <div style="font-family:'Courier New',monospace;text-align:center">
-    <div style="font-size:clamp(30px,6vw,72px);letter-spacing:8px;color:#ff4400;margin-bottom:14px">HULL FAILURE</div>
-    <div style="font-size:clamp(13px,2vw,22px);letter-spacing:4px;color:#884400;margin-bottom:36px">MISSION TERMINATED</div>
-    <div style="font-size:clamp(11px,1.5vw,15px);color:#556;letter-spacing:2px;margin-bottom:10px">SURVIVAL TIME</div>
-    <div id="finalTime" style="font-size:clamp(40px,7vw,88px);color:#00ffcc;letter-spacing:6px;margin-bottom:10px">00:00</div>
-    <div id="finalMode" style="font-size:clamp(10px,1.3vw,13px);color:#444;letter-spacing:2px;margin-bottom:36px"></div>
-    <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap">
-      <button onclick="showSplash()" style="padding:13px 28px;background:transparent;border:1px solid #00ffcc;color:#00ffcc;font-family:'Courier New',monospace;font-size:clamp(10px,1.2vw,13px);letter-spacing:2px">MAIN MENU</button>
-      <button onclick="retryGame()" style="padding:13px 28px;background:transparent;border:1px solid #ff4400;color:#ff4400;font-family:'Courier New',monospace;font-size:clamp(10px,1.2vw,13px);letter-spacing:2px">RETRY</button>
+  <div id="gameover">
+    <div style="font-family:'Courier New',monospace;text-align:center">
+      <div style="font-size:clamp(30px,6vw,72px);letter-spacing:8px;color:#ff4400;margin-bottom:14px">HULL FAILURE</div>
+      <div style="font-size:clamp(13px,2vw,22px);letter-spacing:4px;color:#884400;margin-bottom:36px">MISSION TERMINATED
+      </div>
+      <div style="font-size:clamp(11px,1.5vw,15px);color:#556;letter-spacing:2px;margin-bottom:10px">SURVIVAL TIME</div>
+      <div id="finalTime" style="font-size:clamp(40px,7vw,88px);color:#00ffcc;letter-spacing:6px;margin-bottom:10px">
+        00:00</div>
+      <div id="finalMode" style="font-size:clamp(10px,1.3vw,13px);color:#444;letter-spacing:2px;margin-bottom:36px">
+      </div>
+      <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap">
+        <button onclick="showSplash()"
+          style="padding:13px 28px;background:transparent;border:1px solid #00ffcc;color:#00ffcc;font-family:'Courier New',monospace;font-size:clamp(10px,1.2vw,13px);letter-spacing:2px">MAIN
+          MENU</button>
+        <button onclick="retryGame()"
+          style="padding:13px 28px;background:transparent;border:1px solid #ff4400;color:#ff4400;font-family:'Courier New',monospace;font-size:clamp(10px,1.2vw,13px);letter-spacing:2px">RETRY</button>
+      </div>
     </div>
   </div>
-</div>
-<script type="module" src="main.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
+
 </html>
