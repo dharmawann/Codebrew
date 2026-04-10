@@ -70,7 +70,7 @@ export class Game {
         }
       }
 
-      if (['w', 'a', 's', 'd', 'e', ' '].includes(k)) {
+      if (['w', 'a', 's', 'd', 'e', ' ', 'shift'].includes(k)) {
         e.preventDefault();
       }
     };
@@ -197,7 +197,15 @@ export class Game {
     this.ship.update(this.keys, dt, clamp, this.W(), this.H());
 
     // Speed ramp
-    this.speed = clamp(this.speed + 0.0018 * dt, 0.5, 3.8);
+    const accelerating = this.keys['shift'];
+
+    if (accelerating) {
+      this.speed += 0.03 * dt;
+    } else {
+      this.speed -= 0.02 * dt;
+    }
+
+    this.speed = Math.max(0, this.speed);
 
     // Temperature
     const moving =
