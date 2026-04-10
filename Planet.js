@@ -1,15 +1,22 @@
 export class Planet {
-  constructor(rnd) {
+  constructor(rnd, dangerous = false) {
+    this.dangerous = dangerous;
     this.reset(rnd, true);
   }
 
   reset(rnd, initial = false) {
-    this.x = rnd(-2600, 2600);
-    this.y = rnd(-1400, 1400);
-    this.z = initial ? rnd(1800, 4200) : rnd(3200, 4600);
+    this.x = rnd(-2200, 2200);
+    this.y = rnd(-1300, 1300);
 
-    this.radius = rnd(120, 320);
-    this.vz = rnd(-0.18, -0.05);
+    if (this.dangerous) {
+      this.z = initial ? rnd(1800, 3200) : rnd(2400, 3600);
+      this.radius = rnd(45, 120);
+      this.vz = rnd(-2.4, -1.1);
+    } else {
+      this.z = initial ? rnd(2200, 4600) : rnd(3200, 5000);
+      this.radius = rnd(120, 320);
+      this.vz = rnd(-0.18, -0.05);
+    }
 
     const palettes = [
       { base: '#6fa8dc', glow: 'rgba(120,180,255,0.18)' },
@@ -21,12 +28,20 @@ export class Planet {
     const pick = palettes[Math.floor(rnd(0, palettes.length))];
     this.color = pick.base;
     this.glow = pick.glow;
-    this.ring = Math.random() < 0.35;
+    this.ring = !this.dangerous && Math.random() < 0.35;
+
+    this.rot = rnd(0, 6.28);
+    this.rotV = rnd(-0.01, 0.01);
   }
 
   update(speed, dt, rnd) {
-    this.z += this.vz * speed * dt;
-    if (this.z < 500) this.reset(rnd, false);
+    const multiplier = this.dangerous ? 0.75 : 0.18;
+    this.z += this.vz * speed * multiplier * dt;
+    this.rot += this.rotV * dt;
+
+    if (this.z < -200) {
+      this.reset(rnd, false);
+    }
   }
 
   draw(ctx, projection) {
@@ -38,10 +53,11 @@ export class Planet {
     if (p.x < -500 || p.x > W + 500 || p.y < -500 || p.y > H + 500) return;
 
     const r = this.radius * p.scale;
-    if (r < 8) return;
+    if (r < 6) return;
 
     ctx.save();
     ctx.translate(p.x, p.y);
+    ctx.rotate(this.rot);
 
     ctx.fillStyle = this.glow;
     ctx.beginPath();
@@ -50,7 +66,7 @@ export class Planet {
 
     const grad = ctx.createRadialGradient(-r * 0.28, -r * 0.28, r * 0.15, 0, 0, r);
     grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.12, this.color);
+    grad.addColorStop(0.15, this.color);
     grad.addColorStop(1, '#111822');
 
     ctx.fillStyle = grad;
@@ -59,11 +75,18 @@ export class Planet {
     ctx.fill();
 
     if (this.ring) {
-      ctx.rotate(0.35);
       ctx.strokeStyle = 'rgba(230,230,255,0.28)';
       ctx.lineWidth = Math.max(1, r * 0.08);
       ctx.beginPath();
       ctx.ellipse(0, 0, r * 1.55, r * 0.55, 0, 0, 6.28);
+      ctx.stroke();
+    }
+
+    if (this.dangerous && this.z < 900) {
+      ctx.strokeStyle = `rgba(255,120,0,${Math.max(0, 1 - this.z / 900) * 0.55})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.2, 0, 6.28);
       ctx.stroke();
     }
 
