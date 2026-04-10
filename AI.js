@@ -1,41 +1,102 @@
 export class AI {
   constructor() {
-    this.history  = [];   // { msg, col, age }
+    this.history = [];   // { msg, col, age }
     this.cooldown = 0;
+    this.lastRecommendation = null;
   }
 
-  // Called every frame to age messages and fire periodic warnings
+  // Score each danger and choose the biggest one
+  getRecommendation(temp, hull, humidity) {
+    const heatScore = temp >= 55 ? (temp - 55) * 1.6 : 0;
+    const hullScore = hull <= 75 ? (75 - hull) * 2.2 : 0;
+    const humidityScore = humidity >= 55 ? (humidity - 55) * 1.3 : 0;
+
+    const options = [
+      {
+        type: 'heat',
+        score: heatScore,
+        action: 'cool',
+        msg: 'THERMAL LOAD RISING — COOLING RECOMMENDED',
+        color: '#ff8800'
+      },
+      {
+        type: 'hull',
+        score: hullScore,
+        action: 'shield',
+        msg: 'HULL INTEGRITY DROPPING — SHIELD PRIORITY',
+        color: '#ff4400'
+      },
+      {
+        type: 'humidity',
+        score: humidityScore,
+        action: 'dehumidify',
+        msg: 'CONDENSATION RISK DETECTED — PURGE RECOMMENDED',
+        color: '#ffaa00'
+      }
+    ];
+
+    options.sort((a, b) => b.score - a.score);
+    const top = options[0];
+
+    // if all threats are low, return stable
+    if (!top || top.score < 8) {
+      return {
+        type: 'stable',
+        score: 0,
+        action: 'none',
+        msg: 'ALL SYSTEMS NOMINAL',
+        color: '#00ffcc'
+      };
+    }
+
+    return top;
+  }
+
+  // Called every frame
   update(dt, frame, temp, hull, humidity, aiCooldown) {
-    for (const h of this.history) h.age++;
+    for (const h of this.history) {
+      h.age++;
+    }
 
-    if (frame % 200 !== 0) return;
-    if (temp > 82 && aiCooldown <= 0)
-      this.push('CRITICAL HEAT — PRESS E TO VENT', '#ff4400');
-    else if (hull < 40 && aiCooldown <= 0)
-      this.push('HULL CRITICAL — PRESS E FOR SHIELD', '#ff4400');
-    else if (humidity > 74 && aiCooldown <= 0)
-      this.push('HUMIDITY HAZARD — PRESS E TO PURGE', '#ffaa00');
-    else if (hull > 75 && temp < 55)
-      this.push('ALL SYSTEMS NOMINAL', '#00ffcc');
+    const rec = this.getRecommendation(temp, hull, humidity);
+    this.lastRecommendation = rec;
+
+    // only speak every so often so it doesn't spam
+    if (frame % 120 !== 0) return;
+
+    if (aiCooldown <= 0) {
+      this.push(rec.msg, rec.color);
+    } else {
+      // still update internal recommendation, but reduce spam while recharging
+      if (rec.type === 'stable') {
+        this.push('AI RECHARGING — SYSTEMS STABLE', '#00ccaa');
+      }
+    }
   }
 
-  // Returns { action, cooldown } so Game can apply the side-effects
+  // Execute best action based on current recommendation
   execute(temp, hull, humidity, aiCooldown) {
     if (aiCooldown > 0) return null;
 
-    if (temp > 75) {
-      this.push('COOLING VENTS ENGAGED — TEMP REDUCING', '#00ffcc');
+    const rec = this.getRecommendation(temp, hull, humidity);
+    this.lastRecommendation = rec;
+
+    if (rec.action === 'cool') {
+      this.push('AI EXECUTED COOLING VENTS', '#00ffcc');
       return { action: 'cool', cooldown: 440 };
     }
-    if (hull < 60) {
-      this.push('SHIELD MATRIX ACTIVE — HULL PROTECTED', '#00ccff');
+
+    if (rec.action === 'shield') {
+      this.push('AI EXECUTED SHIELD MATRIX', '#00ccff');
       return { action: 'shield', cooldown: 520 };
     }
-    if (humidity > 70) {
-      this.push('DEHUMIDIFIER ACTIVATED — VISION CLEARING', '#00ffcc');
+
+    if (rec.action === 'dehumidify') {
+      this.push('AI EXECUTED DEHUMIDIFIER', '#00ffcc');
       return { action: 'dehumidify', cooldown: 320 };
     }
-    this.push('ALL SYSTEMS NOMINAL — NO ACTION NEEDED', '#00ffcc');
+
+    this.push('NO ACTION NEEDED — SYSTEMS STABLE', '#00ffcc');
     return { action: 'none', cooldown: 100 };
   }
 
