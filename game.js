@@ -33,6 +33,7 @@ export class Game {
     this.shieldActive = 0;
     this.coolActive = 0;
     this.aiCooldown = 0;
+
     this.tempHistory = Array(60).fill(22);
     this.humHistory = Array(60).fill(45);
 
@@ -47,6 +48,8 @@ export class Game {
     this.particles = [];
 
     this.keys = {};
+    this.nearMissTimer = 0;
+    this.nearMissText = '';
 
     this._onKeyDown = (e) => {
       const k = e.key.toLowerCase();
@@ -151,6 +154,7 @@ export class Game {
     this.shieldActive = Math.max(0, this.shieldActive - dt);
     this.coolActive = Math.max(0, this.coolActive - dt);
     this.jitter = Math.max(0, this.jitter - 0.45 * dt);
+    this.nearMissTimer = Math.max(0, this.nearMissTimer - dt);
 
     this.ship.update(this.keys, dt, clamp, this.W(), this.H());
 
@@ -160,6 +164,8 @@ export class Game {
     let tgt = 18 + this.speed * 20 + (moving ? 9 : 0);
 
     if (this.coolActive > 0) tgt = Math.max(18, tgt - 45);
+
+    this._applyPlanetEffects(dt);
 
     this.temp += (tgt - this.temp) * 0.014 * dt;
     this.temp = clamp(this.temp, 18, 135);
@@ -217,8 +223,10 @@ export class Game {
       const dx = p.x - this.W() / 2;
       const dy = p.y - this.H() / 2;
 
+      this._checkNearMiss(a, dx, dy, hitR);
+
       if (Math.abs(dx) < hitR + 14 && Math.abs(dy) < hitR + 14 && a.z < 220 && a.z > -60) {
-        this._handleCollision(a, p);
+        this._handleCollision(a, p, rnd);
         if (!this.alive) return;
       }
     }
@@ -236,46 +244,155 @@ export class Game {
     }
   }
 
-  _handleCollision(a, p) {
+  _applyPlanetEffects(dt) {
+    const allPlanets = [...this.planets, ...this.hazardPlanets];
+
+    for (const p of allPlanets) {
+      const proj = this.project(p.x, p.y, p.z);
+      if (!proj) continue;
+
+      const dx = proj.x - this.W() / 2;
+      const dy = proj.y - this.H() / 2;
+      const screenDist = Math.sqrt(dx * dx + dy * dy);
+
+      if (p.z > 1600) continue;
+      if (screenDist > Math.min(this.W(), this.H()) * 0.42) continue;
+
+      const closeness = clamp(1 - p.z / 1600, 0, 1) * clamp(1 - screenDist / (Math.min(this.W(), this.H()) * 0.42), 0, 1);
+      const effectPower = closeness * p.effectStrength * dt;
+
+      if (p.effect === 'heat') {
+        this.temp += effectPower * 3.2;
+      } else if (p.effect === 'humidity') {
+        this.humidity += effectPower * 3.8;
+      } else if (p.effect === 'flicker') {
+        this.flickerAlpha = Math.max(this.flickerAlpha, clamp(effectPower * 1.8, 0, 0.45));
+      } else if (p.effect === 'drift') {
+        this.ship.vx += Math.sin(this.frame * 0.02 + p.rot) * effectPower * 0.45;
+      }
+    }
+  }
+
+  _checkNearMiss(a, dx, dy, hitR) {
+    if (a.nearMissed) return;
+    if (a.z > 250 || a.z < 80) return;
+
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const nearR = hitR + 36;
+
+    if (dist > hitR + 10 && dist < nearR) {
+      a.nearMissed = true;
+      this.nearMissTimer = 55;
+      this.nearMissText = 'NEAR MISS';
+      this.flickerAlpha = Math.max(this.flickerAlpha, 0.18);
+
+      if (this.aiMode) {
+        this.ai.push('NEAR MISS DETECTED — GOOD EVASION', '#00ffcc');
+      }
+    }
+  }
+
+  _spawnClusterFragments(source, rndFn) {
+    if (!source.clusterHint) return;
+    if (Math.random() > 0.55) return;
+
+    const fragments = Math.floor(rndFn(1, 3));
+
+    for (let i = 0; i < fragments; i++) {
+      const frag = new Asteroid(rndFn, false);
+      frag.variant = 'fast';
+      frag.size = rndFn(8, 16);
+      frag.vx = source.vx + rndFn(-0.45, 0.45);
+      frag.vy = source.vy + rndFn(-0.3, 0.3);
+      frag.vz = source.vz + rndFn(-1.6, -0.6);
+      frag.x = source.x + rndFn(-120, 120);
+      frag.y = source.y + rndFn(-90, 90);
+      frag.z = source.z + rndFn(140, 260);
+      frag.damageMult = 0.75;
+      frag.tempImpact = 0;
+      frag.electricImpact = 0;
+      frag.trail = true;
+      frag.color = 'hsl(22,18%,38%)';
+      frag.clusterHint = false;
+      frag.nearMissed = false;
+      this.asteroids.push(frag);
+    }
+
+    if (this.asteroids.length > 58) {
+      this.asteroids.length = 58;
+    }
+  }
+
+  _handleCollision(a, p, rndFn) {
     if (this.shieldActive > 0) {
       this.ai.push('SHIELD ABSORBED IMPACT', '#00ccff');
 
       for (let i = 0; i < 9; i++) {
         this.particles.push(
-          new Particle(p.x, p.y, rnd(-3, 3), rnd(-3, 3), 35, '#0088ff')
+          new Particle(p.x, p.y, rndFn(-3, 3), rndFn(-3, 3), 35, '#0088ff')
         );
       }
 
-      a.z = rnd(1500, 2200);
-      a.x = rnd(-1700, 1700);
-      a.y = rnd(-1000, 1000);
+      this._spawnClusterFragments(a, rndFn);
+
+      a.z = rndFn(1500, 2200);
+      a.x = rndFn(-1700, 1700);
+      a.y = rndFn(-1000, 1000);
+      a.nearMissed = false;
       return;
     }
 
-    const dmg = 7 + a.size * 0.28;
+    let dmg = (7 + a.size * 0.28) * (a.damageMult || 1);
+
+    if (a.variant === 'heavy') dmg += 5;
+
     this.hull = Math.max(0, this.hull - dmg);
     this.jitter = 15;
 
+    if (a.tempImpact) {
+      this.temp = Math.min(135, this.temp + a.tempImpact);
+    }
+
+    if (a.electricImpact) {
+      this.aiCooldown = Math.max(this.aiCooldown, 120 + a.electricImpact * 18);
+      this.flickerAlpha = Math.max(this.flickerAlpha, 0.3);
+    }
+
     for (let i = 0; i < 14; i++) {
+      let col = i % 2 === 0 ? '#ff4400' : '#ff8800';
+      if (a.variant === 'charged') col = i % 2 === 0 ? '#66aaff' : '#cce6ff';
+      if (a.variant === 'ember') col = i % 2 === 0 ? '#ff5500' : '#ffcc66';
+
       this.particles.push(
         new Particle(
           this.W() / 2,
           this.H() / 2,
-          rnd(-6, 6),
-          rnd(-6, 6),
+          rndFn(-6, 6),
+          rndFn(-6, 6),
           44,
-          i % 2 === 0 ? '#ff4400' : '#ff8800'
+          col
         )
       );
     }
 
-    a.z = rnd(1600, 2400);
-    a.x = rnd(-1700, 1700);
-    a.y = rnd(-1000, 1000);
-
     if (this.aiMode) {
-      this.ai.push(`HULL BREACH: ${Math.round(this.hull)}% — PRESS E FOR SHIELD`, '#ff4400');
+      if (a.variant === 'ember') {
+        this.ai.push(`THERMAL IMPACT: ${Math.round(this.hull)}% HULL`, '#ff8800');
+      } else if (a.variant === 'charged') {
+        this.ai.push(`ELECTRICAL IMPACT: ${Math.round(this.hull)}% HULL`, '#88ccff');
+      } else if (a.variant === 'heavy') {
+        this.ai.push(`HEAVY IMPACT: ${Math.round(this.hull)}% HULL`, '#ff4400');
+      } else {
+        this.ai.push(`HULL BREACH: ${Math.round(this.hull)}% — PRESS E FOR SHIELD`, '#ff4400');
+      }
     }
+
+    this._spawnClusterFragments(a, rndFn);
+
+    a.z = rndFn(1600, 2400);
+    a.x = rndFn(-1700, 1700);
+    a.y = rndFn(-1000, 1000);
+    a.nearMissed = false;
 
     if (this.hull <= 0) {
       this.hull = 0;
@@ -304,11 +421,29 @@ export class Game {
       return;
     }
 
-    const dmg = 18;
+    let dmg = 18;
+
+    if (p.kind === 'lava') {
+      dmg += 4;
+      this.temp = Math.min(135, this.temp + 8);
+    } else if (p.kind === 'ice') {
+      this.humidity = Math.min(100, this.humidity + 12);
+    } else if (p.kind === 'magnetic') {
+      this.aiCooldown = Math.max(this.aiCooldown, 180);
+      this.flickerAlpha = Math.max(this.flickerAlpha, 0.35);
+    } else if (p.kind === 'gas') {
+      this.ship.vx += rndFn(-1.4, 1.4);
+      this.ship.vy += rndFn(-1.1, 1.1);
+    }
+
     this.hull = Math.max(0, this.hull - dmg);
     this.jitter = 22;
 
     for (let i = 0; i < 20; i++) {
+      let col = i % 2 === 0 ? '#ff4400' : '#ffaa00';
+      if (p.kind === 'ice') col = i % 2 === 0 ? '#c9f3ff' : '#7bdfff';
+      if (p.kind === 'magnetic') col = i % 2 === 0 ? '#9db4ff' : '#d5caff';
+
       this.particles.push(
         new Particle(
           this.W() / 2,
@@ -316,13 +451,13 @@ export class Game {
           rndFn(-7, 7),
           rndFn(-7, 7),
           48,
-          i % 2 === 0 ? '#ff4400' : '#ffaa00'
+          col
         )
       );
     }
 
     if (this.aiMode) {
-      this.ai.push(`MAJOR IMPACT: ${Math.round(this.hull)}% HULL`, '#ff2200');
+      this.ai.push(`MAJOR ${p.kind.toUpperCase()} IMPACT: ${Math.round(this.hull)}% HULL`, '#ff2200');
     }
 
     p.reset(rndFn, false);
@@ -382,6 +517,14 @@ export class Game {
       this.aiCooldown,
       this.frame
     );
+
+    if (this.nearMissTimer > 0) {
+      ctx.fillStyle = `rgba(0,255,200,${Math.min(1, this.nearMissTimer / 30) * 0.85})`;
+      ctx.font = `bold ${Math.round(h * 0.026)}px 'Courier New'`;
+      ctx.textAlign = 'center';
+      ctx.fillText(this.nearMissText, w / 2, h * 0.18);
+      ctx.textAlign = 'left';
+    }
 
     this.hud.drawFog(this.fogAlpha, rnd);
     this.hud.drawFlicker(this.flickerAlpha, rnd);
