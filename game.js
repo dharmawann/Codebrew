@@ -493,7 +493,7 @@ export class Game {
       a.z = rnd(1500, 2200);
       a.x = rnd(-1700, 1700);
     } else {
-      const dmg = 7 + a.size * 0.28;
+      const dmg = (7 + a.size * 0.28) * (this.speed)/25; // faster ship causes harder impact
       this.hull = Math.max(0, this.hull - dmg);
       this.jitter = 15;
 
