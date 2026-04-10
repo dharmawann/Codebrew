@@ -1,3 +1,10 @@
+import { Ship }     from './ship.js';
+import { Star }     from './Star.js';
+import { Asteroid } from './Asteroid.js';
+import { Particle } from './Particle.js';
+import { AI }       from './AI.js';
+import { HUD }      from './HUD.js';
+
 // ─── Utility functions ────────────────────────────────────────────────────────
 function rnd(a, b)      { return a + Math.random() * (b - a); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -26,6 +33,12 @@ export class Game {
     this.humHistory   = Array(60).fill(45);
 
     // ── Objects ─────────────────────────────────────────────────────────────
+    this.ship      = new Ship();
+    this.ai        = new AI();
+    this.hud       = new HUD(this.ctx);
+    this.stars     = Array.from({ length: 540 },  () => new Star(rnd));
+    this.asteroids = Array.from({ length: 44 },   () => new Asteroid(rnd, true));
+    this.particles = [];
 
     // ── Input ────────────────────────────────────────────────────────────────
     this.keys = {};
