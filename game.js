@@ -220,8 +220,8 @@ export class Game {
       tgt = Math.max(18, tgt - 45);
     }
 
-    this.temp += (tgt - this.temp) * 0.014 * dt;
-    this.temp = clamp(this.temp, 18, 500);
+    this.temp += (tgt - this.temp) * 0.002 * dt;
+    this.temp = clamp(this.temp, 18, 135);
 
     // Humidity + fog
     if (Math.random() < 0.004 * dt) {
