@@ -40,6 +40,15 @@ export class Game {
     this.tempHistory = Array(60).fill(22);
     this.humHistory = Array(60).fill(45);
 
+    // ── Asteroid hit effects ────────────────────────────────────────────────
+    this.burnTimer = 0;
+    this.burnStrength = 0;
+    this.freezeTimer = 0;
+    this.freezeStrength = 0;
+    this.effectText = '';
+    this.effectTextColor = '#ffffff';
+    this.effectTextTimer = 0;
+
     // ── Objects ─────────────────────────────────────────────────────────────
     this.ship = new Ship();
     this.ai = new AI();
@@ -109,6 +118,143 @@ export class Game {
       y: this.H() / 2 + (y - this.ship.y) * fov / z,
       scale: fov / z
     };
+  }
+
+  showEffectText(msg, col) {
+    this.effectText = msg;
+    this.effectTextColor = col;
+    this.effectTextTimer = 95;
+  }
+
+  applyAsteroidEffect(a) {
+    if (!a.hitEffect) return;
+
+    if (a.hitEffect === 'burn') {
+      this.burnTimer = Math.max(this.burnTimer, a.effectDuration || 200);
+      this.burnStrength = Math.max(this.burnStrength, a.effectStrength || 0.1);
+      this.showEffectText('BURNING IMPACT', '#ff7a2f');
+
+      if (this.aiMode) {
+        this.ai.push('THERMAL STATUS EFFECT — HULL BURNING', '#ff7a2f');
+      }
+    }
+
+    if (a.hitEffect === 'freeze') {
+      this.freezeTimer = Math.max(this.freezeTimer, a.effectDuration || 180);
+      this.freezeStrength = Math.max(this.freezeStrength, a.effectStrength || 0.25);
+      this.showEffectText('CRYO SLOWDOWN', '#7ec8ff');
+
+      if (this.aiMode) {
+        this.ai.push('CRYO STATUS EFFECT — MOVEMENT REDUCED', '#7ec8ff');
+      }
+    }
+  }
+
+  applyStatusEffects(dt) {
+    if (this.burnTimer > 0) {
+      this.burnTimer = Math.max(0, this.burnTimer - dt);
+
+      const burnDamage = this.burnStrength * 0.05 * dt;
+      const burnHeat = this.burnStrength * 0.22 * dt;
+
+      if (this.shieldActive <= 0) {
+        this.hull = Math.max(0, this.hull - burnDamage);
+      }
+
+      this.temp = Math.min(135, this.temp + burnHeat);
+
+      if (Math.random() < 0.04 * dt) {
+        this.particles.push(
+          new Particle(
+            this.W() / 2 + rnd(-30, 30),
+            this.H() / 2 + rnd(-30, 30),
+            rnd(-1.2, 1.2),
+            rnd(-2.5, -0.5),
+            18,
+            Math.random() < 0.5 ? '#ff5a00' : '#ffb347'
+          )
+        );
+      }
+
+      if (this.burnTimer === 0) {
+        this.burnStrength = 0;
+      }
+    }
+
+    if (this.freezeTimer > 0) {
+      this.freezeTimer = Math.max(0, this.freezeTimer - dt);
+
+      const coolRate = this.freezeStrength * 0.28 * dt;
+      this.temp = Math.max(18, this.temp - coolRate);
+
+      this.ship.vx *= 1 - Math.min(0.045, this.freezeStrength * 0.018);
+      this.ship.vy *= 1 - Math.min(0.045, this.freezeStrength * 0.018);
+
+      if (Math.random() < 0.03 * dt) {
+        this.particles.push(
+          new Particle(
+            this.W() / 2 + rnd(-34, 34),
+            this.H() / 2 + rnd(-34, 34),
+            rnd(-1.3, 1.3),
+            rnd(-1.4, 0.1),
+            20,
+            Math.random() < 0.5 ? '#8fdcff' : '#d5f3ff'
+          )
+        );
+      }
+
+      if (this.freezeTimer === 0) {
+        this.freezeStrength = 0;
+      }
+    }
+
+    this.effectTextTimer = Math.max(0, this.effectTextTimer - dt);
+  }
+
+  drawStatusEffectOverlays() {
+    const ctx = this.ctx;
+    const w = this.W();
+    const h = this.H();
+
+    if (this.burnTimer > 0) {
+      const alpha = 0.08 + 0.08 * Math.sin(this.frame * 0.18);
+      ctx.fillStyle = `rgba(255,80,10,${alpha})`;
+      ctx.fillRect(0, 0, w, h);
+
+      for (let i = 0; i < 4; i++) {
+        const y = h * (0.18 + i * 0.17) + Math.sin(this.frame * 0.08 + i) * 8;
+        ctx.fillStyle = `rgba(255,160,60,${0.035 + i * 0.01})`;
+        ctx.fillRect(0, y, w, 8);
+      }
+    }
+
+    if (this.freezeTimer > 0) {
+      const alpha = 0.07 + 0.05 * Math.sin(this.frame * 0.12);
+      ctx.fillStyle = `rgba(120,190,255,${alpha})`;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = 'rgba(210,240,255,0.18)';
+      ctx.lineWidth = 2;
+
+      for (let i = 0; i < 6; i++) {
+        const x = (w / 6) * i + Math.sin(this.frame * 0.03 + i) * 8;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x - 18, h * 0.12);
+        ctx.lineTo(x + 10, h * 0.22);
+        ctx.stroke();
+      }
+    }
+
+    if (this.effectTextTimer > 0 && this.effectText) {
+      ctx.fillStyle = this.effectTextColor;
+      ctx.font = `bold ${Math.max(18, Math.round(h * 0.03))}px 'Courier New'`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = Math.min(1, this.effectTextTimer / 25);
+      ctx.fillText(this.effectText, w / 2, h * 0.16);
+      ctx.globalAlpha = 1;
+      ctx.textAlign = 'left';
+    }
   }
 
   // ── AI ────────────────────────────────────────────────────────────────────
@@ -193,14 +339,21 @@ export class Game {
     this.coolActive = Math.max(0, this.coolActive - dt);
     this.jitter = Math.max(0, this.jitter - 0.45 * dt);
 
+    this.applyStatusEffects(dt);
+
     // Ship
     this.ship.update(this.keys, dt, clamp, this.W(), this.H());
+
+    // Freeze slowdown on overall speed feel
+    const slowFactor = this.freezeTimer > 0
+      ? clamp(1 - this.freezeStrength * 0.55, 0.45, 1)
+      : 1;
 
     // Speed ramp
     const accelerating = this.keys['shift'];
 
     if (accelerating) {
-      this.speed += 0.03 * dt;
+      this.speed += 0.03 * dt * slowFactor;
     } else {
       this.speed -= 0.02 * dt;
     }
@@ -266,6 +419,7 @@ export class Game {
     // Asteroids
     for (const a of this.asteroids) {
       const asteroidSpeed = this.speed * (1 + this.survivalTime * 0.015);
+
       a.update(
         asteroidSpeed,
         dt,
@@ -343,7 +497,15 @@ export class Game {
       this.hull = Math.max(0, this.hull - dmg);
       this.jitter = 15;
 
+      this.applyAsteroidEffect(a);
+
       for (let i = 0; i < 14; i++) {
+        let particleCol = i % 2 === 0 ? '#ff4400' : '#ff8800';
+
+        if (a.hitEffect === 'freeze') {
+          particleCol = i % 2 === 0 ? '#8fdcff' : '#d5f3ff';
+        }
+
         this.particles.push(
           new Particle(
             this.W() / 2,
@@ -351,7 +513,7 @@ export class Game {
             rnd(-6, 6),
             rnd(-6, 6),
             44,
-            i % 2 === 0 ? '#ff4400' : '#ff8800'
+            particleCol
           )
         );
       }
@@ -360,10 +522,22 @@ export class Game {
       a.x = rnd(-1700, 1700);
 
       if (this.aiMode) {
-        this.ai.push(
-          `HULL BREACH: ${Math.round(this.hull)}% — PRESS E FOR SHIELD`,
-          '#ff4400'
-        );
+        if (a.hitEffect === 'burn') {
+          this.ai.push(
+            `BURN EFFECT ACTIVE: ${Math.round(this.hull)}% HULL`,
+            '#ff7a2f'
+          );
+        } else if (a.hitEffect === 'freeze') {
+          this.ai.push(
+            `CRYO EFFECT ACTIVE: ${Math.round(this.hull)}% HULL`,
+            '#7ec8ff'
+          );
+        } else {
+          this.ai.push(
+            `HULL BREACH: ${Math.round(this.hull)}% — PRESS E FOR SHIELD`,
+            '#ff4400'
+          );
+        }
       }
 
       if (this.hull <= 0) {
@@ -429,6 +603,7 @@ export class Game {
     // Overlays
     this.hud.drawFog(this.fogAlpha, rnd);
     this.hud.drawFlicker(this.flickerAlpha, rnd);
+    this.drawStatusEffectOverlays();
 
     ctx.restore();
   }

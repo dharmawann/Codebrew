@@ -19,6 +19,11 @@ export class Asteroid {
     this.variant = variants[Math.floor(rnd(0, variants.length))];
     this.clusterHint = Math.random() < 0.18;
 
+    this.hitEffect = null;
+    this.effectDuration = 0;
+    this.effectStrength = 0;
+    this.effectOverlay = null;
+
     if (this.variant === 'heavy') {
       this.vx = rnd(-0.22, 0.22);
       this.vy = rnd(-0.15, 0.15);
@@ -59,6 +64,11 @@ export class Asteroid {
       this.electricImpact = 0;
       this.trail = true;
       this.color = `hsl(${rnd(8, 18)},${rnd(68, 88)}%,${rnd(42, 58)}%)`;
+
+      this.hitEffect = 'burn';
+      this.effectDuration = Math.floor(rnd(180, 260));
+      this.effectStrength = rnd(0.08, 0.14);
+      this.effectOverlay = 'rgba(255,90,0,0.22)';
     } else {
       this.vx = rnd(-0.52, 0.52);
       this.vy = rnd(-0.36, 0.36);
@@ -69,6 +79,11 @@ export class Asteroid {
       this.electricImpact = rnd(4, 8);
       this.trail = false;
       this.color = `hsl(${rnd(225, 255)},${rnd(44, 70)}%,${rnd(44, 62)}%)`;
+
+      this.hitEffect = 'freeze';
+      this.effectDuration = Math.floor(rnd(160, 240));
+      this.effectStrength = rnd(0.22, 0.34);
+      this.effectOverlay = 'rgba(120,190,255,0.20)';
     }
 
     this.rot = rnd(0, 6.28);
@@ -142,7 +157,9 @@ export class Asteroid {
     ctx.beginPath();
     for (let i = 0; i < this.pts; i++) {
       const ang = i / this.pts * 6.28;
-      const wobble = this.variant === 'charged' ? Math.sin(ang * 2.3 + this.rot * 1.4) : Math.sin(ang * 1.8 + this.rot);
+      const wobble = this.variant === 'charged'
+        ? Math.sin(ang * 2.3 + this.rot * 1.4)
+        : Math.sin(ang * 1.8 + this.rot);
       const r = sz * (0.58 + 0.42 * wobble);
       if (i === 0) ctx.moveTo(Math.cos(ang) * r, Math.sin(ang) * r);
       else ctx.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
