@@ -164,7 +164,8 @@ export class Game {
 
     // Asteroids
     for (const a of this.asteroids) {
-      a.update(this.speed, dt, rnd);
+      const asteroidSpeed = this.speed * (1 + this.survivalTime * 0.015);
+      a.update(asteroidSpeed, dt, rnd);
       const p = this.project(a.x, a.y, a.z);
       if (!p) continue;
       const hitR = a.size * p.scale * 0.72;
