@@ -113,31 +113,27 @@ update(
   rnd,
   shipX = 0,
   shipY = 0,
-  idleSeconds = 0,
   difficultyLevel = 0
 ) {
   const dx = shipX - this.x;
   const dy = shipY - this.y;
 
 
-  let tracking = 0;
+  let tracking = 0.0046;
 
 
-  if (idleSeconds >= 1) {
-    if (this.variant === 'drift') tracking = 0.0068;
-    else if (this.variant === 'fast') tracking = 0.0062;
-    else if (this.variant === 'heavy') tracking = 0.0038;
-    else if (this.variant === 'charged') tracking = 0.0060;
-    else if (this.variant === 'ember') tracking = 0.0058;
-    else tracking = 0.0052;
-  }
+  if (this.variant === 'drift') tracking = 0.0058;
+  else if (this.variant === 'fast') tracking = 0.0054;
+  else if (this.variant === 'heavy') tracking = 0.0032;
+  else if (this.variant === 'charged') tracking = 0.0052;
+  else if (this.variant === 'ember') tracking = 0.0050;
 
 
-  const depthBoost = this.z < 1500 ? 1.5 : 1;
-  const closeBoost = this.z < 900 ? 1.35 : 1;
-  const difficultyBoost = 1 + difficultyLevel * 0.14;
+  const depthBoost = this.z < 1500 ? 1.45 : 1;
+  const closeBoost = this.z < 900 ? 1.3 : 1;
 
 
+  const difficultyBoost = 1 + difficultyLevel * 0.18;
   const steer = tracking * depthBoost * closeBoost * difficultyBoost * dt;
 
 
@@ -145,8 +141,8 @@ update(
   this.vy += dy * steer * 0.025;
 
 
-  const maxVX = 1.8 + difficultyLevel * 0.16;
-  const maxVY = 1.2 + difficultyLevel * 0.1;
+  const maxVX = 1.8 + difficultyLevel * 0.18;
+  const maxVY = 1.2 + difficultyLevel * 0.12;
 
 
   this.vx = Math.max(-maxVX, Math.min(maxVX, this.vx));
@@ -164,6 +160,8 @@ update(
 
   if (this.z < -120) this.reset(rnd);
 }
+
+
 
 
 
