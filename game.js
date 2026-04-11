@@ -43,7 +43,7 @@ export class Game {
     this.coolActive = 0;
     this.aiCooldown = 0;
     this.radiationFlash = 0;
-    this.idleTime = 0;
+
 
     this.tempHistory = Array(60).fill(22);
     this.humHistory = Array(60).fill(45);
@@ -739,7 +739,6 @@ export class Game {
         rnd,
         this.ship.x + this.ship.vx * 10,
         this.ship.y + this.ship.vy * 10,
-        this.idleTime,
         difficultyLevel
       );
 
