@@ -23,6 +23,7 @@ export class Game {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.aiMode = aiMode;
+    this.idleTime = 0;
 
     this.planets = Array.from({ length: 5 }, () => new Planet(rnd));
     this.healthBoosts = Array.from({ length: 4 }, () => new HealthBoost(rnd, true));
@@ -568,10 +569,35 @@ export class Game {
         hb.respawn(rnd);
       }
     }
+    const moving =
+      this.keys['w'] ||
+      this.keys['a'] ||
+      this.keys['s'] ||
+      this.keys['d'];
+
+
+    if (moving) {
+      this.idleTime = 0;
+    } else {
+      this.idleTime += dt / 60;
+    }
+
 
     for (const a of this.asteroids) {
       const asteroidSpeed = this.speed * (1 + this.survivalTime * 0.015);
-      a.update(asteroidSpeed, dt, rnd, this.ship.x + this.ship.vx * 10, this.ship.y + this.ship.vy * 10);
+      const difficultyLevel = Math.floor(this.survivalTime / 30);
+
+      a.update(
+        asteroidSpeed,
+        dt,
+        rnd,
+        this.ship.x + this.ship.vx * 10,
+        this.ship.y + this.ship.vy * 10,
+        this.idleTime,
+        difficultyLevel
+      );
+
+
       const p = this.project(a.x, a.y, a.z);
       if (!p) continue;
       const hitR = a.size * p.scale * 0.72;
