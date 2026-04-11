@@ -46,7 +46,7 @@ export class Game {
     this.coolActive = 0;
     this.aiCooldown = 0;
     this.radiationFlash = 0;
-    this.idleTime = 0;
+    
 
 
     this.tempHistory = Array(60).fill(22);
@@ -431,11 +431,6 @@ export class Game {
       this.keys['d'];
 
 
-    if (moving) {
-      this.idleTime = 0;
-    } else {
-      this.idleTime += dt / 60;
-    }
 
 
     const slowFactor = this.freezeTimer > 0
@@ -633,7 +628,7 @@ export class Game {
     }
 
 
-    const difficultyLevel = Math.floor(this.survivalTime / 30);
+    const difficultyLevel = Math.floor(this.survivalTime / 20);
 
 
     for (const a of this.asteroids) {
@@ -646,7 +641,6 @@ export class Game {
         rnd,
         this.ship.x + this.ship.vx * 10,
         this.ship.y + this.ship.vy * 10,
-        this.idleTime,
         difficultyLevel
       );
 
