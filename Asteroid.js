@@ -123,7 +123,7 @@ update(
   let tracking = 0;
 
 
-  if (idleSeconds >= 10) {
+  if (idleSeconds >= 1) {
     if (this.variant === 'drift') tracking = 0.0068;
     else if (this.variant === 'fast') tracking = 0.0062;
     else if (this.variant === 'heavy') tracking = 0.0038;
