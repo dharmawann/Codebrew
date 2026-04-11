@@ -157,7 +157,7 @@ export class HUD {
   _drawEng(x, y, w, h, fs, game) {
     const ctx = this.ctx;
     const fog = game.fogAlpha;
-    const tempCritical = game.temp > 86;
+    const tempCritical = game.temp > 88;
 
     if (tempCritical && game.frame % 6 < 3) {
       ctx.fillStyle = 'rgba(255,15,0,.065)';
@@ -168,7 +168,7 @@ export class HUD {
     const ph = Math.round(h * 0.21);
     const labels = ['TEMPERATURE (°C)', 'HUMIDITY (%)'];
     const cols = [
-      game.temp > 86 ? '#ff2200' : game.temp > 68 ? '#ff8800' : '#00ccff',
+      game.temp > 88 ? '#ff2200' : game.temp > 68 ? '#ff8800' : '#00ccff',
       game.humidity > 72 ? '#ff8800' : '#00ffcc'
     ];
     const hists = [game.tempHistory, game.humHistory];
