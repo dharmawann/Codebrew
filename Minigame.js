@@ -1,4 +1,4 @@
-const KEYS_POOL = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K'];
+const KEYS_POOL = ['Y', 'K', 'L', 'M', 'N', 'V', 'C', 'Q'];
 
 export class Minigame {
     constructor() {

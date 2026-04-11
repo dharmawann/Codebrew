@@ -51,7 +51,7 @@ export class AI {
       {
         type: 'dehumidify',
         score: risks.humidity,
-        msg: 'VISUAL OBSTRUCTION — PRESS D',
+        msg: 'VISUAL OBSTRUCTION — PRESS F',
         color: '#ffaa00'
       }
     ];
@@ -103,8 +103,7 @@ export class AI {
 
   execute(temp, hull, humidity, oxygen, radiation, aiCooldown) {
     if (aiCooldown > 0) return null;
-    const rec = this.getRecommendation(temp, hull, humidity, oxygen, radiation, this.burnTimer,
-    this.speed);
+    const rec = this.getRecommendation(temp, hull, humidity, oxygen, radiation, this.burnTimer, this.speed);
     this.lastRecommendation = rec;
 
     if (rec.action === 'cool') {

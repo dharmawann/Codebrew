@@ -8,6 +8,7 @@ import { Planet } from './Planet.js';
 import { HealthBoost } from './healthboost.js';
 import { Minigame } from './Minigame.js';
 import { Alien } from './Alien.js';
+import { Sound } from './Sound.js';
 
 function rnd(a, b) {
   return a + Math.random() * (b - a);
@@ -44,7 +45,6 @@ export class Game {
     this.aiCooldown = 0;
     this.radiationFlash = 0;
 
-
     this.tempHistory = Array(60).fill(22);
     this.humHistory = Array(60).fill(45);
     this.oxygenHistory = Array(60).fill(100);
@@ -77,19 +77,29 @@ export class Game {
     this.asteroids = Array.from({ length: 44 }, () => new Asteroid(rnd, true));
     this.particles = [];
 
+    this.aliens = Array.from({ length: 3 }, () => {
+      const types = ['friendly', 'mysterious', 'aggressive'];
+      return new Alien(types[Math.floor(Math.random() * types.length)]);
+    });
+
     this.minigame = new Minigame();
     this.minigameRewardApplied = false;
+
+    this.sound = new Sound();
+    this._wasThrusting = false;
 
     this.keys = {};
 
     this._onKeyDown = (e) => {
       const k = e.key.toLowerCase();
+      this.sound.resume();
 
       // If a minigame is active, all input goes there first
       if (this.minigame.active) {
         if (k === 'escape') {
           this.minigame.close();
           this.minigameRewardApplied = false;
+          this.sound.play('minigameCancel');
           e.preventDefault();
           return;
         }
@@ -234,6 +244,7 @@ export class Game {
 
     this.minigame.start(type, param);
     this.minigameRewardApplied = false;
+    this.sound.play('minigameOpen');
 
     if (this.aiMode) {
       if (type === 'cool') {
@@ -280,6 +291,8 @@ export class Game {
     this.minigameRewardApplied = true;
 
     if (this.minigame.result === 'success') {
+      this.sound.play('minigameSuccess');
+
       if (this.minigame.type === 'cool') {
         this.coolActive = 260;
         this.temp = Math.max(18, this.temp - 18);
@@ -309,6 +322,8 @@ export class Game {
         }
       }
     } else if (this.minigame.result === 'fail') {
+      this.sound.play('minigameFail');
+
       if (this.minigame.type === 'cool') {
         this.temp = Math.min(135, this.temp + 5);
         this.showEffectText('COOLING FAILED', '#ff4422');
@@ -337,6 +352,7 @@ export class Game {
       this.burnTimer = Math.max(this.burnTimer, a.effectDuration || 200);
       this.burnStrength = Math.max(this.burnStrength, a.effectStrength || 0.1);
       this.showEffectText('BURNING IMPACT', '#ff7a2f');
+      this.sound.play('burn');
 
       if (this.aiMode) {
         this.ai.push('THERMAL STATUS EFFECT — HULL BURNING', '#ff7a2f');
@@ -347,6 +363,7 @@ export class Game {
       this.freezeTimer = Math.max(this.freezeTimer, a.effectDuration || 180);
       this.freezeStrength = Math.max(this.freezeStrength, a.effectStrength || 0.25);
       this.showEffectText('CRYO SLOWDOWN', '#7ec8ff');
+      this.sound.play('freeze');
 
       if (this.aiMode) {
         this.ai.push('CRYO STATUS EFFECT — MOVEMENT REDUCED', '#7ec8ff');
@@ -477,23 +494,28 @@ export class Game {
 
     if (result.action === 'cool') {
       this.coolActive = 200;
+      this.sound.play('aiExecute');
     }
 
     if (result.action === 'shield') {
       this.shieldActive = 260;
+      this.sound.play('aiExecute');
     }
 
     if (result.action === 'dehumidify') {
       this.humidity = Math.max(28, this.humidity - 28);
+      this.sound.play('aiExecute');
     }
 
     if (result.action === 'oxygen') {
       this.oxygen = Math.min(100, this.oxygen + 26);
+      this.sound.play('aiExecute');
     }
 
     if (result.action === 'radiation') {
       this.radiation = Math.max(0, this.radiation - 24);
       this.radiationFlash = 0.15;
+      this.sound.play('aiExecute');
     }
   }
 
@@ -585,6 +607,12 @@ export class Game {
 
     this.speed = Math.max(0, this.speed);
 
+    // Thrust sound
+    const isThrusting = !!this.keys['shift'];
+    if (isThrusting && !this._wasThrusting) this.sound.play('thrustOn');
+    if (!isThrusting && this._wasThrusting) this.sound.play('thrustOff');
+    this._wasThrusting = isThrusting;
+
     let tgt = 18 + this.speed * 20 + (moving ? 9 : 0);
 
     if (this.coolActive > 0) {
@@ -647,34 +675,28 @@ export class Game {
     if (this.hull <= 0) {
       this.hull = 0;
       this.alive = false;
+      this.sound.play('death');
       return;
     }
 
     if (this.health <= 0) {
       this.health = 0;
       this.alive = false;
+      this.sound.play('death');
       return;
     }
 
     this.tempHistory.push(this.temp);
-    if (this.tempHistory.length > 60) {
-      this.tempHistory.shift();
-    }
+    if (this.tempHistory.length > 60) this.tempHistory.shift();
 
     this.humHistory.push(this.humidity);
-    if (this.humHistory.length > 60) {
-      this.humHistory.shift();
-    }
+    if (this.humHistory.length > 60) this.humHistory.shift();
 
     this.oxygenHistory.push(this.oxygen);
-    if (this.oxygenHistory.length > 60) {
-      this.oxygenHistory.shift();
-    }
+    if (this.oxygenHistory.length > 60) this.oxygenHistory.shift();
 
     this.radiationHistory.push(this.radiation);
-    if (this.radiationHistory.length > 60) {
-      this.radiationHistory.shift();
-    }
+    if (this.radiationHistory.length > 60) this.radiationHistory.shift();
 
     for (const s of this.stars) {
       s.update(this.speed, dt, rnd);
@@ -682,6 +704,10 @@ export class Game {
 
     for (const p of this.planets) {
       p.update(this.speed, dt, rnd);
+    }
+
+    for (const alien of this.aliens) {
+      alien.update(this.speed, dt);
     }
 
     for (const hb of this.healthBoosts) {
@@ -719,6 +745,7 @@ export class Game {
         }
 
         this.showEffectText(`+${heal}% HULL`, '#7dffbf');
+        this.sound.play('collectHealth');
 
         if (this.aiMode) {
           this.ai.push(`HEALTH BOOST COLLECTED +${heal}%`, '#7dffbf');
@@ -779,6 +806,9 @@ export class Game {
       this.flickerAlpha = rnd(0.2, 0.55);
     }
 
+    // Alarms
+    this.sound.updateAlarms(this.hull, this.oxygen, this.temp);
+
     if (this.aiMode) {
       this.ai.update(
         dt,
@@ -797,6 +827,7 @@ export class Game {
   _handleCollision(a, p) {
     if (this.shieldActive > 0) {
       this.ai.push('SHIELD ABSORBED IMPACT', '#00ccff');
+      this.sound.play('shield');
 
       for (let i = 0; i < 9; i++) {
         this.particles.push(
@@ -810,6 +841,7 @@ export class Game {
       const dmg = (7 + a.size * 0.28) * (this.speed + 18) / 25;
       this.hull = Math.max(0, this.hull - dmg);
       this.jitter = 15;
+      this.sound.play('impact');
 
       this.applyAsteroidEffect(a);
 
@@ -860,6 +892,7 @@ export class Game {
       if (this.hull <= 0) {
         this.hull = 0;
         this.alive = false;
+        this.sound.play('death');
       }
     }
   }
@@ -885,6 +918,10 @@ export class Game {
 
     for (const p of this.planets) {
       p.draw(ctx, this.project.bind(this));
+    }
+
+    for (const alien of this.aliens) {
+      alien.draw(ctx, this.project.bind(this));
     }
 
     for (const hb of this.healthBoosts) {
@@ -927,6 +964,7 @@ export class Game {
   }
 
   destroy() {
+    this.sound.destroy();
     document.removeEventListener('keydown', this._onKeyDown);
     document.removeEventListener('keyup', this._onKeyUp);
     this.canvas.removeEventListener('mousemove', this._onMouseMove);

@@ -354,8 +354,7 @@ export class HUD {
 
     const items = [
       { label: 'OXYGEN', value: game.oxygen, color: game.oxygen < 25 ? '#ff6644' : game.oxygen < 50 ? '#ffaa00' : '#66ccff', suffix: '%' },
-      { label: 'RADIATION', value: game.radiation, color: game.radiation > 75 ? '#ccff33' : game.radiation > 45 ? '#ffaa00' : '#00ffcc', suffix: '%' },
-      { label: 'HEALTH', value: game.health, color: game.health < 25 ? '#ff4444' : game.health < 55 ? '#ffaa00' : '#00ff99', suffix: '%' }
+      { label: 'RADIATION', value: game.radiation, color: game.radiation > 75 ? '#ccff33' : game.radiation > 45 ? '#ffaa00' : '#00ffcc', suffix: '%' }
     ];
 
     let offsetY = 0;
