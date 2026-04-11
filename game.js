@@ -7,6 +7,7 @@ import { HUD } from './HUD.js';
 import { Planet } from './Planet.js';
 import { HealthBoost } from './healthboost.js';
 import { Minigame } from './Minigame.js';
+import { Alien } from './Alien.js';
 
 function rnd(a, b) {
   return a + Math.random() * (b - a);
