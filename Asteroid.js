@@ -107,68 +107,65 @@ export class Asteroid {
   }
 
 
-  update(
-    speed,
-    dt,
-    rnd,
-    shipX = 0,
-    shipY = 0,
-    idleSeconds = 0,
-    difficultyLevel = 0
-  ) {
-    const dx = shipX - this.x;
-    const dy = shipY - this.y;
+update(
+  speed,
+  dt,
+  rnd,
+  shipX = 0,
+  shipY = 0,
+  idleSeconds = 0,
+  difficultyLevel = 0
+) {
+  const dx = shipX - this.x;
+  const dy = shipY - this.y;
 
 
-    let tracking = 0.0048;
+  let tracking = 0;
 
 
-    if (this.variant === 'drift') tracking = 0.0062;
-    if (this.variant === 'fast') tracking = 0.0058;
-    if (this.variant === 'heavy') tracking = 0.0032;
-    if (this.variant === 'charged') tracking = 0.0056;
-    if (this.variant === 'ember') tracking = 0.0052;
-
-
-    const depthBoost = this.z < 1500 ? 1.5 : 1;
-    const closeBoost = this.z < 900 ? 1.35 : 1;
-
-
-    // difficulty increases every 30 seconds
-    const difficultyBoost = 1 + difficultyLevel * 0.14;
-
-
-    // if player is idle for 10+ seconds, asteroids aggressively track
-    const idleBoost = idleSeconds >= 10 ? 2.15 : 1;
-
-
-    const steer = tracking * depthBoost * closeBoost * difficultyBoost * idleBoost * dt;
-
-
-    this.vx += dx * steer * 0.025;
-    this.vy += dy * steer * 0.025;
-
-
-    const maxVX = 1.8 + difficultyLevel * 0.16;
-    const maxVY = 1.2 + difficultyLevel * 0.1;
-
-
-    this.vx = Math.max(-maxVX, Math.min(maxVX, this.vx));
-    this.vy = Math.max(-maxVY, Math.min(maxVY, this.vy));
-
-
-    // increase forward pressure with difficulty
-    const forwardBoost = 1 + difficultyLevel * 0.08;
-
-
-    this.z += this.vz * speed * forwardBoost * dt;
-    this.x += this.vx * dt;
-    this.y += this.vy * dt;
-    this.rot += this.rotV * (1 + difficultyLevel * 0.05) * dt;
-
-
-    if (this.z < -120) this.reset(rnd);
+  if (idleSeconds >= 10) {
+    if (this.variant === 'drift') tracking = 0.0068;
+    else if (this.variant === 'fast') tracking = 0.0062;
+    else if (this.variant === 'heavy') tracking = 0.0038;
+    else if (this.variant === 'charged') tracking = 0.0060;
+    else if (this.variant === 'ember') tracking = 0.0058;
+    else tracking = 0.0052;
   }
+
+
+  const depthBoost = this.z < 1500 ? 1.5 : 1;
+  const closeBoost = this.z < 900 ? 1.35 : 1;
+  const difficultyBoost = 1 + difficultyLevel * 0.14;
+
+
+  const steer = tracking * depthBoost * closeBoost * difficultyBoost * dt;
+
+
+  this.vx += dx * steer * 0.025;
+  this.vy += dy * steer * 0.025;
+
+
+  const maxVX = 1.8 + difficultyLevel * 0.16;
+  const maxVY = 1.2 + difficultyLevel * 0.1;
+
+
+  this.vx = Math.max(-maxVX, Math.min(maxVX, this.vx));
+  this.vy = Math.max(-maxVY, Math.min(maxVY, this.vy));
+
+
+  const forwardBoost = 1 + difficultyLevel * 0.08;
+
+
+  this.z += this.vz * speed * forwardBoost * dt;
+  this.x += this.vx * dt;
+  this.y += this.vy * dt;
+  this.rot += this.rotV * (1 + difficultyLevel * 0.05) * dt;
+
+
+  if (this.z < -120) this.reset(rnd);
+}
+
+
 
 
   draw(ctx, projection, clamp) {
